@@ -1,0 +1,146 @@
+{
+  "dest_port": 13117,
+  "server_name": "Rav-Hen Masters",
+    "magic_cookie" : "0xabcddcba",
+    "message_type" : "0x2",
+
+  "questions": [
+    {
+        "question": "The movie 'The Shawshank Redemption' is based on a novel by Stephen King.",
+        "is_true": true
+    },
+    {
+        "question": "Leonardo DiCaprio won an Oscar for his role in 'Titanic'.",
+        "is_true": false
+    },
+    {
+        "question": "The character Darth Vader says the line 'Luke, I am your father' in 'Star Wars: Episode IV - A New Hope'.",
+        "is_true": false
+    },
+    {
+        "question": "The film 'Forrest Gump' was based on a book of the same name.",
+        "is_true": true
+    },
+    {
+        "question": "In 'The Lord of the Rings' film trilogy, Frodo Baggins is portrayed by actor Elijah Wood.",
+        "is_true": true
+    },
+    {
+        "question": "The first 'Toy Story' movie was released in 1995.",
+        "is_true": true
+    },
+    {
+        "question": "The movie 'Jurassic Park' was directed by Steven Spielberg.",
+        "is_true": true
+    },
+    {
+        "question": "Meryl Streep has won the most Oscars of any actor or actress.",
+        "is_true": false
+    },
+    {
+        "question": "The film 'The Godfather' was released in the 1970s.",
+        "is_true": true
+    },
+    {
+        "question": "The character Jack Dawson dies at the end of the movie 'Titanic'.",
+        "is_true": true
+    },
+    {
+        "question": "The movie 'Pulp Fiction' was directed by Quentin Tarantino.",
+        "is_true": true
+    },
+    {
+        "question": "The main character in the movie 'The Matrix' is named Neo.",
+        "is_true": true
+    },
+    {
+        "question": "The film 'Avatar' is set on a moon named Pandora.",
+        "is_true": true
+    },
+    {
+        "question": "The actor Johnny Depp played the role of Captain Hook in the movie 'Hook'.",
+        "is_true": false
+    },
+    {
+        "question": "The movie 'The Silence of the Lambs' is based on a novel by Thomas Harris.",
+        "is_true": true
+    },
+    {
+        "question": "In the film 'Good Will Hunting', Matt Damon's character is a janitor at Harvard University.",
+        "is_true": false
+    },
+    {
+        "question": "The character 'Hannibal Lecter' first appeared in the movie 'The Silence of the Lambs'.",
+        "is_true": false
+    },
+    {
+        "question": "The movie 'Inception' was directed by Christopher Nolan.",
+        "is_true": true
+    },
+    {
+        "question": "The character 'Yoda' is portrayed using puppetry in the original 'Star Wars' trilogy.",
+        "is_true": true
+    },
+    {
+        "question": "The film 'E.T. the Extra-Terrestrial' was directed by George Lucas.",
+        "is_true": false
+    },
+    {
+        "question": "Tom Hanks starred in the movie 'Cast Away' as a FedEx employee stranded on a desert island.",
+        "is_true": true
+    },
+    {
+        "question": "The movie 'The Dark Knight' features the character 'The Joker', played by Heath Ledger.",
+        "is_true": true
+    },
+    {
+        "question": "The movie 'The Wizard of Oz' was released in the 1950s.",
+        "is_true": false
+    },
+    {
+        "question": "In the movie 'Inglourious Basterds', Brad Pitt's character leads a group of Jewish soldiers on a mission to assassinate Nazi leaders.",
+        "is_true": true
+    },
+    {
+        "question": "The movie 'The Lion King' was released in the 1990s.",
+        "is_true": true
+    },
+    {
+        "question": "Sylvester Stallone played the role of Rambo in the 'Rambo' movie series.",
+        "is_true": true
+    },
+    {
+        "question": "The film 'Inglourious Basterds' was directed by Quentin Tarantino.",
+        "is_true": true
+    },
+    {
+        "question": "The character 'Indiana Jones' is an archaeologist.",
+        "is_true": true
+    },
+    {
+        "question": "The movie 'The Sound of Music' is set in Austria.",
+        "is_true": true
+    },
+    {
+        "question": "Al Pacino starred in the movie 'Scarface' as Tony Montana.",
+        "is_true": true
+    },
+    {
+        "question": "The movie 'The Social Network' is about the founding of Twitter.",
+        "is_true": false
+    },
+    {
+        "question": "The character 'Dory' suffers from short-term memory loss in the movie 'Finding Nemo'.",
+        "is_true": true
+    },
+    {
+        "question": "The film 'Inception' features a dream within a dream concept.",
+        "is_true": true
+    },
+    {
+        "question": "The actor Heath Ledger won a posthumous Oscar for his role in 'The Dark Knight'.",
+        "is_true": true
+    }
+]
+
+}
