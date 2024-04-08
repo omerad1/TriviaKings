@@ -30,6 +30,7 @@ server_name = config_data['server_name']
 questions = config_data['questions']
 magic_cookie = config_data['magic_cookie']
 message_type = config_data['message_type']
+true_answers, false_answers = config_data['true_answers'], config_data['false_answers']
 # get available port for the server
 ip_address, server_port = get_available_port()
 
@@ -37,7 +38,7 @@ ip_address, server_port = get_available_port()
 server_name_encoded = server_name.encode('utf-8').ljust(32)
 
 player_manager = PlayerManager()
-game_engine = GameEngine(player_manager, questions)
+game_engine = GameEngine(player_manager, questions,true_answers,false_answers)
 broadcast_finished_event = threading.Event
 
 

@@ -29,3 +29,7 @@ class PlayerManager:
 
     def get_active_players(self):
         return self.active_players
+
+    def set_active_players(self, active_players):
+        with self.lock:
+            self.active_players = active_players

@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class ANSIColor(Enum):
+class ANSI(Enum):
     # Foreground colors
     BLACK = '\033[30m'
     RED = '\033[31m'
@@ -12,3 +12,6 @@ class ANSIColor(Enum):
     CYAN = '\033[36m'
     WHITE = '\033[37m'
     RESET = '\033[0m'
+    SAD_FACE = '\U0001F972'
+    THUMBS_UP = '\U0001F44D'
+    THUMBS_DOWN = '\U0001F44E'
