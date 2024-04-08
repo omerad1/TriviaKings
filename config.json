@@ -3,7 +3,8 @@
   "server_name": "Rav-Hen Masters",
     "magic_cookie" : "0xabcddcba",
     "message_type" : "0x2",
-
+    "true_options" : ["Y","1","T","y","t"],
+    "false_options": ["N","n","0","F","f"],
   "questions": [
     {
         "question": "The movie 'The Shawshank Redemption' is based on a novel by Stephen King.",
