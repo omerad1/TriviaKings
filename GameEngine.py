@@ -1,5 +1,7 @@
 import threading
 import time
+
+import Colors
 from Colors import ANSI
 import random
 from ClientHandler import ClientHandler
@@ -15,6 +17,7 @@ class GameEngine:
         self.client_answers_lock = threading.Lock()  # Define the lock object
         self.true_answers = true_answers
         self.false_answers = false_answers
+        self.is_game_over = threading.Event()
 
     def get_answers(self):
         end_time = time.time() + 10  # Set the end time for receiving answers (10 seconds from now)
@@ -46,7 +49,9 @@ class GameEngine:
             self.round += 1
 
     def game_over(self, winner):
-        pass
+        msg = f"Game over! \nCongratulations to the winner : {ANSI.PINK}{winner.get_name()} {ANSI.CROWN}{ANSI.RESET}!"
+        self.send_message_to_clients(msg)
+        self.is_game_over.set()
 
     def handle_answers(self, answers, answer):
         correct_players = []

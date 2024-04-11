@@ -30,7 +30,7 @@ server_name = config_data['server_name']
 questions = config_data['questions']
 magic_cookie = config_data['magic_cookie']
 message_type = config_data['message_type']
-true_answers, false_answers = config_data['true_answers'], config_data['false_answers']
+true_answers, false_answers = config_data['true_options'], config_data['false_options']
 # get available port for the server
 ip_address, server_port = get_available_port()
 
@@ -45,10 +45,10 @@ broadcast_finished_event = threading.Event
 # Function to broadcast offer messages
 def broadcast_offer():
     print("Server started, listening on IP address", ip_address, "waiting for players to join the game!")
-    offer_message = magic_cookie + message_type + server_name_encoded + server_port.to_bytes(2, byteorder='big')
+    offer_message = magic_cookie.encode('utf-8') + message_type.encode('utf-8') + server_name_encoded + str(server_port).encode('utf-8')
     start_time = time.time()  # Record the start time of the 10-second window
     curr_len = len(player_manager.get_players())  # how many players we have
-    while curr_len == 0 or time.time() - start_time <= 10:  # checks if we doesn't have players yet or that 10 seconds
+    while curr_len == 0 or time.time() - start_time <= 10:  # checks if we don't have players yet or that 10 seconds
         # has passed from last join
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as udp_socket:
@@ -108,28 +108,32 @@ def send_welcome_message():
 
 # Main function
 def main():
-    # Start UDP broadcast thread
-    udp_thread = threading.Thread(target=broadcast_offer)
-    udp_thread.start()
+    while True:
+        # Start UDP broadcast thread
+        udp_thread = threading.Thread(target=broadcast_offer)
+        udp_thread.start()
 
-    # Start TCP server
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
-        tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        tcp_socket.bind(('0.0.0.0', server_port))
-        tcp_socket.listen()
-        print(f"Server listening on IP address 0.0.0.0, port {server_port}")
+        # Start TCP server
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
+            tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            tcp_socket.bind(('0.0.0.0', server_port))
+            tcp_socket.listen()
+            print(f"Server listening on IP address 0.0.0.0, port {server_port}")
 
-        # Accept incoming connections and handle clients
-        while True:
-            client_socket, address = tcp_socket.accept()
-            client_handler = threading.Thread(target=handle_client, args=(client_socket, address))
-            client_handler.start()
+            # Accept incoming connections and handle clients
+            while True:
+                client_socket, address = tcp_socket.accept()
+                client_handler = threading.Thread(target=handle_client, args=(client_socket, address))
+                client_handler.start()
 
-            # Check if the broadcast has finished
-            if broadcast_finished_event.is_set():
-                # Call start_game once the broadcast is finished
-                start_game(tcp_socket)
-                break  # Exit the loop to stop accepting new connections
+                # Check if the broadcast has finished
+                if broadcast_finished_event.is_set():
+                    # Call start_game once the broadcast is finished
+                    game_engine.is_game_over.clear()
+                    start_game(tcp_socket)
+                    break  # Exit the loop to stop accepting new connections
+        game_engine.is_game_over.wait()
+        print("Game over, sending out offer requests...")
 
 
 if __name__ == "__main__":

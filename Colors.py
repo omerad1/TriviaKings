@@ -11,7 +11,9 @@ class ANSI(Enum):
     MAGENTA = '\033[35m'
     CYAN = '\033[36m'
     WHITE = '\033[37m'
+    PINK = '\033[95m'
     RESET = '\033[0m'
     SAD_FACE = '\U0001F972'
     THUMBS_UP = '\U0001F44D'
     THUMBS_DOWN = '\U0001F44E'
+    CROWN = "👑"
