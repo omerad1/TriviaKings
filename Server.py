@@ -46,6 +46,43 @@ def get_ip_address():
     return addr
 
 
+def get_subnet_mask(ip_address):
+    """
+    Get the subnet mask of the network interface associated with the given IP address.
+
+    Args:
+        ip_address (str): The IP address to find the subnet mask for.
+
+    Returns:
+        str: The subnet mask of the network interface.
+    """
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        addrs = netifaces.ifaddresses(interface)
+        if netifaces.AF_INET in addrs:
+            interface_ip = addrs[netifaces.AF_INET][0]['addr']
+            if interface_ip == ip_address:
+                mask = addrs[netifaces.AF_INET][0]['netmask']
+                return mask
+    return None
+
+
+def get_broadcast_ip(ip_address, subnet_mask):
+    """
+    Get the broadcast IP address of the network interface associated with the given IP address and subnet mask.
+
+    Args:
+        ip_address (str): The IP address of the network interface.
+        subnet_mask (str): The subnet mask of the network interface.
+
+    Returns:
+        str: The broadcast IP address of the network interface.
+    """
+    network = ipaddress.ip_network(f"{ip_address}/{subnet_mask}", strict=False)
+    broadcast_ip = str(network.broadcast_address)
+    return broadcast_ip
+
+
 class Server:
     """
     A server implementation for a trivia game.
@@ -90,6 +127,8 @@ class Server:
         Args:
             udp_socket (socket.socket): The UDP socket used for broadcasting.
         """
+        subnet_mask = get_subnet_mask(self.ip_address)
+        brod_ip = get_broadcast_ip(self.ip_address, subnet_mask)
         print(
             f"{Colors.ANSI.MAGENTA.value}Server started, listening on IP address \n{Colors.ANSI.RESET.value}{self.ip_address} waiting for players to join the game!")
         offer_message = (
@@ -99,15 +138,15 @@ class Server:
         curr_len = len(self.player_manager.get_players())
         while curr_len == 0 or time.time() - start_time <= 10:
             try:
-                udp_socket.sendto(offer_message, (self.ip_address, self.dest_port))
+                udp_socket.sendto(offer_message, (brod_ip, self.dest_port))
             except OSError as e:
                 print("Error:", e)
                 continue
             time.sleep(1)
             if len(self.player_manager.get_players()) > curr_len:
                 curr_len = len(self.player_manager.get_players())
-                print("New player joined.")
                 start_time = time.time()
+
         print("No new players joined within 10 seconds. Stopping broadcast.")
         self.broadcast_finished_event.set()
 
@@ -157,7 +196,17 @@ class Server:
         print(welcome_message)
         for player in players:
             client_socket = player.get_socket()
-            client_socket.sendall(welcome_message.encode())
+            try:
+                client_socket.sendall(welcome_message.encode())
+            except socket.error as se:
+                print(f"A socket error occurred {se}")
+                print(f'player {player.get_name()} has been kicked')
+                self.player_manager.update_player_status(player)
+
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                print(f'player {player.get_name()} has been kicked')
+                self.player_manager.update_player_status(player)
 
     def get_udp_socket(self):
         """
