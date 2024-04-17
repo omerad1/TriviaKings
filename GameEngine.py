@@ -1,3 +1,4 @@
+import socket
 import threading
 import time
 import random
@@ -16,7 +17,6 @@ class GameEngine:
         player_manager (PlayerManager): The player manager managing the players.
         questions (list): List of questions for the game.
         socket (socket): The TCP socket used for communication with the clients.
-        client_answers (dict): Dictionary to store client answers.
         client_answers_lock (threading.Lock): Lock object for synchronizing access to client answers.
         true_answers (list): List of true answers.
         false_answers (list): List of false answers.
@@ -37,8 +37,6 @@ class GameEngine:
         self.player_manager = player_manager
         self.questions = questions
         self.socket = None
-        self.client_answers = {}
-        self.client_answers_lock = threading.Lock()
         self.true_answers = true_answers
         self.false_answers = false_answers
         self.is_game_over = threading.Event()
@@ -53,16 +51,17 @@ class GameEngine:
         end_time = time.time() + 10  # Set the end time for receiving answers (10 seconds from now)
 
         client_threads = []
+        client_answers = {}
+        client_answers_lock = threading.Lock()
         for player in self.player_manager.get_active_players():
-            client_thread = ClientHandler(player, self.player_manager, self.client_answers,
-                                          self.client_answers_lock)
+            client_thread = ClientHandler(player, self.player_manager, client_answers, client_answers_lock)
             client_thread.start()
             client_threads.append(client_thread)
 
         for thread in client_threads:
             thread.join(end_time - time.time())
 
-        return self.client_answers
+        return client_answers
 
     def send_message_to_clients(self, msg):
         """
@@ -74,7 +73,18 @@ class GameEngine:
         print(msg)
         for player in self.player_manager.get_active_players():
             client_socket = player.get_socket()
-            client_socket.sendall(msg.encode())
+            try:
+                client_socket.sendall(msg.encode())
+
+            except socket.error as se:
+                print(f"A socket error occurred {se}")
+                print(f'player {player.get_name()} has been kicked')
+                self.player_manager.update_player_status(player)
+
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                print(f'player {player.get_name()} has been kicked')
+                self.player_manager.update_player_status(player)
 
     def play_game(self, tcp_socket):
         """
@@ -85,7 +95,7 @@ class GameEngine:
         """
         self.socket = tcp_socket
         random.shuffle(self.questions)
-        while self.round < len(self.questions):
+        while self.round < len(self.questions) and not self.is_game_over:
             question = self.questions[self.round]
             self.play_round(question)
             self.round += 1
@@ -97,7 +107,7 @@ class GameEngine:
         Args:
             winner (Player): The winning player.
         """
-        msg = f"Game over! \nCongratulations to the winner : {ANSI.PINK}{winner.get_name()} {ANSI.CROWN}{ANSI.RESET}!"
+        msg = f"Game over! \nCongratulations to the winner : {ANSI.PINK.value}{winner.get_name()} {ANSI.CROWN.value}{ANSI.RESET.value}!"
         self.send_message_to_clients(msg)
         self.is_game_over.set()
 
@@ -122,12 +132,13 @@ class GameEngine:
                 incorrect_players.append(player)
         return correct_players, incorrect_players
 
-    def play_round(self, question):
+    def build_round_question_msg(self, question):
         """
-        Plays a round of the game.
-
+        Builds a question message for a round of the game.
         Args:
             question (dict): a dict of the question and its answer.
+        Returns:
+            (string) the round msg for the players
         """
         player_names = ", ".join([player.get_name() for player in self.player_manager.get_active_players()])
         round_msg = f"{ANSI.CYAN.value}Round {self.round}{ANSI.RESET.value}"
@@ -135,7 +146,16 @@ class GameEngine:
         question_msg = f"{ANSI.MAGENTA.value}\nThe next question is...{ANSI.RESET.value}"
         question_body = f"\nTrue or False: {question['question']}"
         msg = f"{round_msg}{player_msg}{question_msg}{question_body}"
-        self.send_message_to_clients(msg)
+        return msg
+
+    def play_round(self, question):
+        """
+        Plays a round of the game.
+        Args:
+            question (dict): a dict of the question and its answer.
+        """
+        round_msg = self.build_round_question_msg(question)
+        self.send_message_to_clients(round_msg)
         answers = self.get_answers()
         correct_players, incorrect_players = self.handle_answers(answers, question['is_true'])
         # no one answered / no one answered correct
@@ -150,10 +170,9 @@ class GameEngine:
             msg = ""
             for player in self.player_manager.get_active_players():
                 if player in correct_players:
-                    msg += f"{ANSI.GREEN.value} {player.name} is correct ! {ANSI.THUMBS_UP} {ANSI.RESET.value}"
+                    msg += f"{ANSI.GREEN.value} {player.name} is correct ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}"
                 else:
-                    msg += f"{ANSI.RED.value} {player.name} is incorrect ! {ANSI.THUMBS_UP} {ANSI.RESET.value}"
+                    msg += f"{ANSI.RED.value} {player.name} is incorrect ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}"
 
             self.player_manager.set_active_players(correct_players)
-
             self.send_message_to_clients(msg)
