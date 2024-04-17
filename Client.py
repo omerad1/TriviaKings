@@ -1,5 +1,4 @@
 import socket
-import struct
 import threading
 
 from JsonReader import JSONReader
@@ -17,6 +16,7 @@ class Client:
         self.running = False
         self.json_reader = JSONReader()
         self.server_name = self.json_reader.get('server_name')
+        self.server_address = None
 
     def start(self):
         self.running = True
@@ -31,14 +31,15 @@ class Client:
         self.udp_socket.bind(('', udp_port))
         while self.running:
             message, address = self.udp_socket.recvfrom(4096)
+            self.server_address = address[0]
             if self.parse_offer_message(message):
-                print(f"Received offer from server '{self.server_name}' at address {address[0]},"
-                      f" attempting to connect...")
+                print(f"Received offer from server '{self.server_name}' at address {self.server_address}, "
+                      f"attempting to connect...")
                 break
 
     def connect_to_server(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.connect((self.server_name, self.server_port))
+        self.server_socket.connect((self.server_address, self.server_port))
         self.server_socket.sendall(f"{self.player_name}\n".encode())
 
     def receive_question(self):
@@ -50,13 +51,8 @@ class Client:
                 break
             print(data.decode().strip())
 
-            # Start the timer for 10 seconds
-            timer = threading.Timer(10, self.send_auto_answer)
-            timer.start()
-
             # Wait for user input, if received before the timer expires, cancel the timer
             user_input = input("Enter your answer (or wait for auto answer in 10 seconds): ")
-            timer.cancel()
 
             # Send user input to the server
             self.server_socket.sendall(user_input.encode() + b"\n")

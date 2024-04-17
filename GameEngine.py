@@ -122,22 +122,22 @@ class GameEngine:
                 incorrect_players.append(player)
         return correct_players, incorrect_players
 
-    def play_round(self, question_answer):
+    def play_round(self, question):
         """
         Plays a round of the game.
 
         Args:
-            question_answer (dict): Dictionary containing the question and correct answer.
+            question (dict): a dict of the question and its answer.
         """
         player_names = ", ".join([player.get_name() for player in self.player_manager.get_active_players()])
         round_msg = f"{ANSI.CYAN.value}Round {self.round}{ANSI.RESET.value}"
         player_msg = f"{ANSI.BLUE.value}, played by {player_names}{ANSI.RESET.value}"
         question_msg = f"{ANSI.MAGENTA.value}\nThe next question is...{ANSI.RESET.value}"
-        question_body = f"\nTrue or False: {question_answer['question']}"
+        question_body = f"\nTrue or False: {question['question']}"
         msg = f"{round_msg}{player_msg}{question_msg}{question_body}"
         self.send_message_to_clients(msg)
         answers = self.get_answers()
-        correct_players, incorrect_players = self.handle_answers(answers, question_answer['answer'])
+        correct_players, incorrect_players = self.handle_answers(answers, question['is_true'])
         # no one answered / no one answered correct
         if len(correct_players) == 0:
             self.send_message_to_clients(f"{ANSI.RED.value} No one answered correctly {ANSI.SAD_FACE.value} "
