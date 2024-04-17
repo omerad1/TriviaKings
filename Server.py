@@ -1,6 +1,5 @@
 import threading
 import time
-import netifaces
 
 import Colors
 from JsonReader import JSONReader
@@ -8,6 +7,7 @@ from Player import Player
 from PlayerManager import PlayerManager
 from GameEngine import GameEngine
 import socket
+import Statistics
 import ipaddress
 
 
@@ -101,8 +101,8 @@ class Server:
         server_name_encoded (bytes): The encoded and padded server name.
     """
 
-    def __init__(self, config_file='config.json'):
-        self.config_reader = JSONReader(config_file)
+    def __init__(self):
+        self.config_reader = JSONReader('config.json')
         self.player_manager = PlayerManager()
         self.broadcast_finished_event = threading.Event()
         self.ip_address = get_ip_address()
@@ -115,7 +115,8 @@ class Server:
         questions = self.config_reader.get('questions')
         true_options = self.config_reader.get('true_options')
         false_options = self.config_reader.get('false_options')
-        self.game_engine = GameEngine(self.player_manager, questions, true_options, false_options)
+        self.statistics = Statistics
+        self.game_engine = GameEngine(self.player_manager, questions, true_options, false_options, self.statistics)
 
     def broadcast_offer(self, udp_socket):
         """

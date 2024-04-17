@@ -17,13 +17,12 @@ class GameEngine:
         player_manager (PlayerManager): The player manager managing the players.
         questions (list): List of questions for the game.
         socket (socket): The TCP socket used for communication with the clients.
-        client_answers_lock (threading.Lock): Lock object for synchronizing access to client answers.
         true_answers (list): List of true answers.
         false_answers (list): List of false answers.
         is_game_over (threading.Event): Event object to signal when the game is over.
     """
 
-    def __init__(self, player_manager, questions, true_answers, false_answers):
+    def __init__(self, player_manager, questions, true_answers, false_answers, statistics):
         """
         Initializes the GameEngine with the provided parameters.
 
@@ -40,6 +39,8 @@ class GameEngine:
         self.true_answers = true_answers
         self.false_answers = false_answers
         self.is_game_over = threading.Event()
+        self.statistics = statistics
+
 
     def get_answers(self):
         """
@@ -111,6 +112,9 @@ class GameEngine:
         self.send_message_to_clients(msg)
         self.is_game_over.set()
 
+        #update statistics:
+        self.statistics.update_winner_player()
+
     def handle_answers(self, answers, answer):
         """
         Handles client answers.
@@ -130,6 +134,11 @@ class GameEngine:
                 correct_players.append(player)
             else:
                 incorrect_players.append(player)
+
+        #update statistics:
+        self.statistics.update_correct_players(correct_players)
+        self.statistics.update_incorrect_players(incorrect_players)
+
         return correct_players, incorrect_players
 
     def build_round_question_msg(self, question):
@@ -157,6 +166,10 @@ class GameEngine:
         round_msg = self.build_round_question_msg(question)
         self.send_message_to_clients(round_msg)
         answers = self.get_answers()
+
+        #save for statistics:
+        self.statistics.update_question_ans(question,answers)
+
         correct_players, incorrect_players = self.handle_answers(answers, question['is_true'])
         # no one answered / no one answered correct
         if len(correct_players) == 0:
