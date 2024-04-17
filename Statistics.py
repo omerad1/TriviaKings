@@ -42,7 +42,7 @@ class Statistics:
 
     def update_question_ans(self, question, answers):
         for answer in answers:
-            if answer == 't' or answer == 'T' or answer == 'Y' or answer == 'Y' or answer == 1:
+            if answer in JSONReader('config.json').get('true_options'):
                 self.questions_data[question]['true'] += 1
             else:
                 self.questions_data[question]['false'] += 1
