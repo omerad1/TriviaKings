@@ -5,7 +5,7 @@ import threading
 from JsonReader import JSONReader
 
 SERVER_NAME_LENGTH = 32
-SERVER_PORT_LENGTH = 2
+SERVER_PORT_LENGTH = 4
 
 
 class Client:
@@ -27,14 +27,13 @@ class Client:
     def listen_for_offers(self):
         udp_port = self.json_reader.get('dest_port')
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.udp_socket.bind(('', udp_port))
-        self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-
         while self.running:
             message, address = self.udp_socket.recvfrom(4096)
             if self.parse_offer_message(message):
-                print(
-                    f"Received offer from server '{self.server_name}' at address {address[0]}, attempting to connect...")
+                print(f"Received offer from server '{self.server_name}' at address {address[0]},"
+                      f" attempting to connect...")
                 break
 
     def connect_to_server(self):
@@ -77,24 +76,23 @@ class Client:
             return False
 
         real_magic_cookie = self.json_reader.get('magic_cookie')
-        magic_cookie = struct.unpack('I', message[:4])[0]
+        magic_cookie = message[:10].decode('utf-8')
         if magic_cookie != real_magic_cookie:
             return False
 
         offer_message_type = self.json_reader.get('message_type')
-        message_type = struct.unpack('B', message[4:5])[0]
+        message_type = message[10:13].decode('utf-8')
         if message_type != offer_message_type:
             return False
 
-        server_name = message[5:5 + SERVER_NAME_LENGTH].decode().strip()
+        server_name = message[13:13 + SERVER_NAME_LENGTH].decode().strip()
         if self.server_name != server_name:
             return False
 
-        self.server_port = \
-            struct.unpack('H', message[5 + SERVER_NAME_LENGTH:5 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH])[0]
+        self.server_port = int(message[13 + SERVER_NAME_LENGTH: 13 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH].decode())
         return True
 
 
 # Example usage
-client = Client("Alice")
+client = Client("Kobi gal")
 client.start()
