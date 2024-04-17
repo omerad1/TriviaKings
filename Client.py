@@ -1,58 +1,100 @@
 import socket
+import struct
 import threading
 
-# Constants
-UDP_PORT = 13117
+from JsonReader import JSONReader
+
+SERVER_NAME_LENGTH = 32
+SERVER_PORT_LENGTH = 2
 
 
-# Function to listen for offer messages
-def listen_for_offer():
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-        udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        udp_socket.bind(('0.0.0.0', UDP_PORT))
-        print("Client started, listening for offer requests...")
-        while True:
-            data, addr = udp_socket.recvfrom(1024)
-            magic_cookie = data[:4]
-            message_type = data[4]
-            if magic_cookie == b'\xab\xcd\xdc\xba' and message_type == 0x2:
-                server_name = data[5:37].decode().strip()
-                server_port = int.from_bytes(data[37:39], byteorder='big')
-                print(f"Received offer from server {server_name} at address {addr[0]}, attempting to connect...")
-                connect_to_server(server_name, addr[0], server_port)
+class Client:
+    def __init__(self, player_name):
+        self.player_name = player_name
+        self.server_port = None
+        self.server_socket = None
+        self.udp_socket = None
+        self.running = False
+        self.json_reader = JSONReader()
+        self.server_name = self.json_reader.get('server_name')
 
+    def start(self):
+        self.running = True
+        self.listen_for_offers()
+        self.connect_to_server()
+        self.play_game()
 
-# Function to connect to the server over TCP
-def connect_to_server(server_name, server_ip, server_port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
-        try:
-            tcp_socket.connect((server_ip, server_port))
-            player_name = "Alice"  # Change player name as needed
-            tcp_socket.sendall(player_name.encode() + b'\n')
-            print("Connected to server. Waiting for game to start...")
-            receive_messages_from_server(tcp_socket)
-        except Exception as e:
-            print(f"Error connecting to server: {e}")
+    def listen_for_offers(self):
+        udp_port = self.json_reader.get('dest_port')
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_socket.bind(('', udp_port))
+        self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
-
-# Function to receive and display messages from the server
-def receive_messages_from_server(tcp_socket):
-    while True:
-        try:
-            data = tcp_socket.recv(1024)
-            if not data:
+        while self.running:
+            message, address = self.udp_socket.recvfrom(4096)
+            if self.parse_offer_message(message):
+                print(
+                    f"Received offer from server '{self.server_name}' at address {address[0]}, attempting to connect...")
                 break
-            print(data.decode())
-        except Exception as e:
-            print(f"Error receiving data from server: {e}")
-            break
+
+    def connect_to_server(self):
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.connect((self.server_name, self.server_port))
+        self.server_socket.sendall(f"{self.player_name}\n".encode())
+
+    def receive_question(self):
+        while self.running:
+            data = self.server_socket.recv(4096)
+            if not data:
+                print("Server disconnected, listening for offer requests...")
+                self.running = False
+                break
+            print(data.decode().strip())
+
+            # Start the timer for 10 seconds
+            timer = threading.Timer(10, self.send_auto_answer)
+            timer.start()
+
+            # Wait for user input, if received before the timer expires, cancel the timer
+            user_input = input("Enter your answer (or wait for auto answer in 10 seconds): ")
+            timer.cancel()
+
+            # Send user input to the server
+            self.server_socket.sendall(user_input.encode() + b"\n")
+
+    def send_auto_answer(self):
+        # Send a default answer if the user hasn't provided one after 10 seconds
+        default_answer = "Auto answer after 10 seconds"
+        self.server_socket.sendall(default_answer.encode() + b"\n")
+
+    def play_game(self):
+        # Start listening for questions in a separate thread
+        question_thread = threading.Thread(target=self.receive_question)
+        question_thread.start()
+
+    def parse_offer_message(self, message):
+        if len(message) < 4 + 1 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH:
+            return False
+
+        real_magic_cookie = self.json_reader.get('magic_cookie')
+        magic_cookie = struct.unpack('I', message[:4])[0]
+        if magic_cookie != real_magic_cookie:
+            return False
+
+        offer_message_type = self.json_reader.get('message_type')
+        message_type = struct.unpack('B', message[4:5])[0]
+        if message_type != offer_message_type:
+            return False
+
+        server_name = message[5:5 + SERVER_NAME_LENGTH].decode().strip()
+        if self.server_name != server_name:
+            return False
+
+        self.server_port = \
+        struct.unpack('H', message[5 + SERVER_NAME_LENGTH:5 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH])[0]
+        return True
 
 
-# Main function
-def main():
-    listen_thread = threading.Thread(target=listen_for_offer)
-    listen_thread.start()
-
-
-if __name__ == "__main__":
-    main()
+# Example usage
+client = Client("Alice")
+client.start()
