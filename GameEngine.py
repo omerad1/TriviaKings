@@ -123,9 +123,9 @@ class GameEngine:
 
         if self.round > len(self.questions):
             self.send_message_to_clients("Were out of questions, the game is over :(")
-        if self.player_manager.get_active_players() == 0:
+        elif len(self.player_manager.get_active_players()) == 0:
             print("Were out of players, game is over :(")
-        else:
+        elif winner is not None:
             self.game_over(winner)
 
     def game_over(self, winner):
