@@ -1,6 +1,4 @@
 import random
-import threading
-
 from Client import Client
 
 
@@ -24,4 +22,3 @@ class Bot(Client):
             # Wait for user input, if received before the timer expires, cancel the timer
             user_input = random.choice(self.answer_choices)
             self.server_socket.sendall(user_input.encode() + b"\n")
-

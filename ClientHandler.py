@@ -1,9 +1,28 @@
 import threading
-import time
+from Player import Player
 
 
 class ClientHandler(threading.Thread):
-    def __init__(self, player, player_manager, client_answers,client_answers_lock):
+    """
+    Class representing a thread for handling client interactions.
+
+    Attributes:
+        player (Player): The player associated with the client.
+        player_manager (PlayerManager): The player manager managing the players.
+        client_answers (dict): Dictionary to store client answers.
+        client_answers_lock (threading.Lock): Lock object for synchronizing access to client answers.
+    """
+
+    def __init__(self, player, player_manager, client_answers, client_answers_lock):
+        """
+        Initializes the ClientHandler.
+
+        Args:
+            player (Player): The player associated with the client.
+            player_manager (PlayerManager.PlayerManager): The player manager managing the players.
+            client_answers (dict): Dictionary to store client answers.
+            client_answers_lock (threading.Lock): Lock object for synchronizing access to client answers.
+        """
         super().__init__()
         self.player = player
         self.player_manager = player_manager
@@ -11,6 +30,9 @@ class ClientHandler(threading.Thread):
         self.client_answers_lock = client_answers_lock
 
     def run(self):
+        """
+        Runs the thread to handle client interactions.
+        """
         name = self.player.get_name()
         client_socket = self.player.get_socket()
         try:
@@ -23,6 +45,3 @@ class ClientHandler(threading.Thread):
             # Use thread-safe access to the shared dictionary
             with self.client_answers_lock:
                 self.client_answers[self.player] = None
-
-
-

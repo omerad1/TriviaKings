@@ -91,7 +91,7 @@ class Client:
             return False
 
         self.server_port = \
-        struct.unpack('H', message[5 + SERVER_NAME_LENGTH:5 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH])[0]
+            struct.unpack('H', message[5 + SERVER_NAME_LENGTH:5 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH])[0]
         return True
 
 

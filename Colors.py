@@ -2,7 +2,10 @@ from enum import Enum
 
 
 class ANSI(Enum):
-    # Foreground colors
+    """
+    Enum representing ANSI escape codes for text styling and colors.
+    """
+
     BLACK = '\033[30m'
     RED = '\033[31m'
     GREEN = '\033[32m'

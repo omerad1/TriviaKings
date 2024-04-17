@@ -1,31 +1,61 @@
 import threading
 import time
-
-import Colors
-from Colors import ANSI
 import random
+from Colors import ANSI
 from ClientHandler import ClientHandler
+from PlayerManager import PlayerManager
+from Player import Player
 
 
 class GameEngine:
+    """
+    Class representing the game engine for managing the gameplay.
+
+    Attributes:
+        round (int): The current round of the game.
+        player_manager (PlayerManager): The player manager managing the players.
+        questions (list): List of questions for the game.
+        socket (socket): The TCP socket used for communication with the clients.
+        client_answers (dict): Dictionary to store client answers.
+        client_answers_lock (threading.Lock): Lock object for synchronizing access to client answers.
+        true_answers (list): List of true answers.
+        false_answers (list): List of false answers.
+        is_game_over (threading.Event): Event object to signal when the game is over.
+    """
+
     def __init__(self, player_manager, questions, true_answers, false_answers):
+        """
+        Initializes the GameEngine with the provided parameters.
+
+        Args:
+            player_manager (PlayerManager): The player manager managing the players.
+            questions (list): List of questions for the game.
+            true_answers (list): List of true answers.
+            false_answers (list): List of false answers.
+        """
         self.round = 0
         self.player_manager = player_manager
         self.questions = questions
         self.socket = None
         self.client_answers = {}
-        self.client_answers_lock = threading.Lock()  # Define the lock object
+        self.client_answers_lock = threading.Lock()
         self.true_answers = true_answers
         self.false_answers = false_answers
         self.is_game_over = threading.Event()
 
     def get_answers(self):
+        """
+        Receives answers from clients.
+
+        Returns:
+            dict: Dictionary containing client answers.
+        """
         end_time = time.time() + 10  # Set the end time for receiving answers (10 seconds from now)
 
         client_threads = []
         for player in self.player_manager.get_active_players():
             client_thread = ClientHandler(player, self.player_manager, self.client_answers,
-                                          self.client_answers_lock)  # Pass the lock object to the client handler
+                                          self.client_answers_lock)
             client_thread.start()
             client_threads.append(client_thread)
 
@@ -35,12 +65,24 @@ class GameEngine:
         return self.client_answers
 
     def send_message_to_clients(self, msg):
+        """
+        Sends a message to all active clients.
+
+        Args:
+            msg (str): The message to send to clients.
+        """
         print(msg)
         for player in self.player_manager.get_active_players():
             client_socket = player.get_socket()
             client_socket.sendall(msg.encode())
 
     def play_game(self, tcp_socket):
+        """
+        Plays the game.
+
+        Args:
+            tcp_socket (socket.socket): The TCP socket for communication with clients.
+        """
         self.socket = tcp_socket
         random.shuffle(self.questions)
         while self.round < len(self.questions):
@@ -49,11 +91,28 @@ class GameEngine:
             self.round += 1
 
     def game_over(self, winner):
+        """
+        Handles the end of the game.
+
+        Args:
+            winner (Player): The winning player.
+        """
         msg = f"Game over! \nCongratulations to the winner : {ANSI.PINK}{winner.get_name()} {ANSI.CROWN}{ANSI.RESET}!"
         self.send_message_to_clients(msg)
         self.is_game_over.set()
 
     def handle_answers(self, answers, answer):
+        """
+        Handles client answers.
+
+        Args:
+            answers (dict): Dictionary containing client answers.
+            answer (str): The correct answer.
+
+        Returns:
+            list: List of correct players.
+            list: List of incorrect players.
+        """
         correct_players = []
         incorrect_players = []
         for player, player_answer in answers.items():
@@ -64,15 +123,21 @@ class GameEngine:
         return correct_players, incorrect_players
 
     def play_round(self, question_answer):
+        """
+        Plays a round of the game.
+
+        Args:
+            question_answer (dict): Dictionary containing the question and correct answer.
+        """
         player_names = ", ".join([player.get_name() for player in self.player_manager.get_active_players()])
         round_msg = f"{ANSI.CYAN.value}Round {self.round}{ANSI.RESET.value}"
         player_msg = f"{ANSI.BLUE.value}, played by {player_names}{ANSI.RESET.value}"
         question_msg = f"{ANSI.MAGENTA.value}\nThe next question is...{ANSI.RESET.value}"
-        question_body = f"\nTrue or False: {question_answer["question"]}"
+        question_body = f"\nTrue or False: {question_answer['question']}"
         msg = f"{round_msg}{player_msg}{question_msg}{question_body}"
         self.send_message_to_clients(msg)
         answers = self.get_answers()
-        correct_players, incorrect_players = self.handle_answers(answers, question_answer)
+        correct_players, incorrect_players = self.handle_answers(answers, question_answer['answer'])
         # no one answered / no one answered correct
         if len(correct_players) == 0:
             self.send_message_to_clients(f"{ANSI.RED.value} No one answered correctly {ANSI.SAD_FACE.value} "
