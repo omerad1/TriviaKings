@@ -1,6 +1,5 @@
 import threading
 import time
-import netifaces
 
 import Colors
 from JsonReader import JSONReader
