@@ -1,6 +1,6 @@
 import threading
 import time
-
+import netifaces
 import Colors
 from JsonReader import JSONReader
 from Player import Player
@@ -45,6 +45,43 @@ def get_ip_address():
     return addr
 
 
+def get_subnet_mask(ip_address):
+    """
+    Get the subnet mask of the network interface associated with the given IP address.
+
+    Args:
+        ip_address (str): The IP address to find the subnet mask for.
+
+    Returns:
+        str: The subnet mask of the network interface.
+    """
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        addrs = netifaces.ifaddresses(interface)
+        if netifaces.AF_INET in addrs:
+            interface_ip = addrs[netifaces.AF_INET][0]['addr']
+            if interface_ip == ip_address:
+                mask = addrs[netifaces.AF_INET][0]['netmask']
+                return mask
+    return None
+
+
+def get_broadcast_ip(ip_address, subnet_mask):
+    """
+    Get the broadcast IP address of the network interface associated with the given IP address and subnet mask.
+
+    Args:
+        ip_address (str): The IP address of the network interface.
+        subnet_mask (str): The subnet mask of the network interface.
+
+    Returns:
+        str: The broadcast IP address of the network interface.
+    """
+    network = ipaddress.ip_network(f"{ip_address}/{subnet_mask}", strict=False)
+    broadcast_ip = str(network.broadcast_address)
+    return broadcast_ip
+
+
 class Server:
     """
     A server implementation for a trivia game.
@@ -60,7 +97,6 @@ class Server:
         ip_address (str): The IP address of the server.
         udp_port (int): The UDP port used for broadcasting offers.
         tcp_port (int): The TCP port used for the game server.
-        server_name_encoded (bytes): The encoded and padded server name.
     """
 
     def __init__(self, config_file='config.json'):
@@ -70,14 +106,15 @@ class Server:
         self.ip_address = get_ip_address()
         self.udp_port = find_available_port(self.ip_address)
         self.tcp_port = find_available_port(self.ip_address)
-        self.server_name_encoded = self.config_reader.get('server_name').encode('utf-8').ljust(32)
+        self.server_name = self.config_reader.get('server_name')
         self.dest_port = self.config_reader.get('dest_port')
         self.magic_cookie = self.config_reader.get('magic_cookie')
         self.message_type = self.config_reader.get('message_type')
-        questions = self.config_reader.get('questions')
-        true_options = self.config_reader.get('true_options')
-        false_options = self.config_reader.get('false_options')
-        self.game_engine = GameEngine(self.player_manager, questions, true_options, false_options)
+        self.questions = self.config_reader.get('questions')
+        self.true_options = self.config_reader.get('true_options')
+        self.false_options = self.config_reader.get('false_options')
+        self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options, self.false_options,
+                                      self.server_name)
 
     def broadcast_offer(self, udp_socket):
         """
@@ -89,25 +126,28 @@ class Server:
         Args:
             udp_socket (socket.socket): The UDP socket used for broadcasting.
         """
-        print(
-            f"{Colors.ANSI.MAGENTA.value}Server started, listening on IP address \n{Colors.ANSI.RESET.value}{self.ip_address} waiting for players to join the game!")
+        subnet_mask = get_subnet_mask(self.ip_address)
+        brod_ip = get_broadcast_ip(self.ip_address, subnet_mask)
+        print(f"{Colors.ANSI.MAGENTA.value}Server started, listening on IP address \n"
+              f"{Colors.ANSI.RESET.value}{self.ip_address} waiting for players to join the game!")
         offer_message = (
-                self.magic_cookie.encode('utf-8') + self.message_type.encode('utf-8') + self.server_name_encoded +
-                str(self.tcp_port).encode('utf-8'))
+                self.magic_cookie.encode('utf-8') + self.message_type.encode('utf-8') +
+                self.server_name.encode('utf-8').ljust(32) + str(self.tcp_port).encode('utf-8'))
         start_time = time.time()
         curr_len = len(self.player_manager.get_players())
         while curr_len == 0 or time.time() - start_time <= 10:
             try:
-                udp_socket.sendto(offer_message, (self.ip_address, self.dest_port))
+                udp_socket.sendto(offer_message, (brod_ip, self.dest_port))
             except OSError as e:
                 print("Error:", e)
                 continue
             time.sleep(1)
             if len(self.player_manager.get_players()) > curr_len:
                 curr_len = len(self.player_manager.get_players())
-                print("New player joined.")
                 start_time = time.time()
+
         print("No new players joined within 10 seconds. Stopping broadcast.")
+        udp_socket.close()
         self.broadcast_finished_event.set()
 
     def handle_client(self, client_socket, address):
@@ -129,35 +169,6 @@ class Server:
         except Exception as e:
             print(f"Error handling client: {e}")
 
-    def start_game(self, tcp_socket):
-        """
-        Start the trivia game.
-
-        This method is called after the broadcast has finished and players have connected.
-        It sends the welcome message to all clients and starts the game engine.
-
-        Args:
-            tcp_socket (socket.socket): The TCP socket used for the game server.
-        """
-        self.send_welcome_message()
-        self.game_engine.play_game(tcp_socket)
-
-    def send_welcome_message(self):
-        """
-        Send the welcome message to all connected players.
-
-        This method is called at the start of the game to greet the players and
-        provide information about the game.
-        """
-        welcome_message = f"Welcome to the {self.server_name_encoded.decode().strip()} server, where we are answering trivia questions!\n"
-        players = self.player_manager.get_players()
-        for i, player in enumerate(players, 1):
-            welcome_message += f"Player {i}: {player.get_name()}\n"
-        print(welcome_message)
-        for player in players:
-            client_socket = player.get_socket()
-            client_socket.sendall(welcome_message.encode())
-
     def get_udp_socket(self):
         """
         Create and configure the UDP socket for broadcasting offers.
@@ -170,6 +181,20 @@ class Server:
         udp_socket.bind((self.ip_address, self.udp_port))
         return udp_socket
 
+    def reset_game(self):
+        """
+        Resets the game.
+
+        This method is called once the game is over, it resets the server data and starts over.
+        """
+        self.player_manager = PlayerManager()
+        self.udp_port = find_available_port(self.ip_address)
+        self.tcp_port = find_available_port(self.ip_address)
+        self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options,
+                                      self.false_options, self.server_name)
+        self.broadcast_finished_event.clear()
+        self.start()
+
     def start(self):
         """
         Start the trivia server.
@@ -177,37 +202,34 @@ class Server:
         This method runs the main loop of the server, handling UDP broadcasts and TCP connections.
         It continues to run until the game is over.
         """
-        while True:
-            udp_socket = self.get_udp_socket()
+        udp_socket = self.get_udp_socket()
 
-            # Start UDP broadcast thread
-            udp_thread = threading.Thread(target=self.broadcast_offer, args=(udp_socket,))
-            udp_thread.start()
+        # Start UDP broadcast thread
+        udp_thread = threading.Thread(target=self.broadcast_offer, args=(udp_socket,))
+        udp_thread.start()
 
-            # Start TCP server
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
-                tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                tcp_socket.bind((self.ip_address, self.tcp_port))
-                tcp_socket.listen()
-                print(f"Server listening on IP address {self.ip_address}, port {self.tcp_port}")
+        # Start TCP server
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_socket:
+            tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            tcp_socket.bind((self.ip_address, self.tcp_port))
+            tcp_socket.listen()
+            print(f"Server listening on IP address {self.ip_address}, port {self.tcp_port}")
 
-                while not self.broadcast_finished_event.is_set():
-                    tcp_socket.settimeout(1)  # Set a timeout of 1 second
-                    try:
-                        client_socket, address = tcp_socket.accept()
-                    except socket.timeout:
-                        continue  # Continue waiting if no client connects within 1 second
+            while not self.broadcast_finished_event.is_set():
+                tcp_socket.settimeout(1)  # Set a timeout of 1 second
+                try:
+                    client_socket, address = tcp_socket.accept()
+                except socket.timeout:
+                    continue  # Continue waiting if no client connects within 1 second
 
-                    client_handler = threading.Thread(target=self.handle_client, args=(client_socket, address))
-                    client_handler.start()
+                client_handler = threading.Thread(target=self.handle_client, args=(client_socket, address))
+                client_handler.start()
 
-                # Once broadcast is finished, start the game
-                self.game_engine.is_game_over.clear()
-                self.start_game(tcp_socket)
+            self.game_engine.play_game(tcp_socket)
 
-            self.game_engine.is_game_over.wait()
-            print("Game over, sending out offer requests...")
+        self.reset_game()
 
 
-server = Server()
-server.start()
+if __name__ == '__main__':
+    server = Server()
+    server.start()
