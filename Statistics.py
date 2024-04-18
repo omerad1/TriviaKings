@@ -75,7 +75,6 @@ class Statistics:
 
         self.save_data()
 
-
     def update_correct_players(self, correct_players):
         """
                Updates statistics for correct answers by players.
@@ -102,7 +101,6 @@ class Statistics:
 
         self.save_data()
 
-
     def update_winner_player(self, player):
         """
                 Updates statistics for winning players.
@@ -115,7 +113,6 @@ class Statistics:
         self.players_data[player]['win'] += 1
 
         self.save_data()
-
 
     def get_most_winner(self):
         """
@@ -174,11 +171,8 @@ class Statistics:
 
             else:
                 if JSONReader('config.json').get('questions').get('is_true') == 'true':
-                    common_answers.append((quest,"false"))
+                    common_answers.append((quest, "false"))
                 else:
-                    common_answers.append((quest,"true"))
+                    common_answers.append((quest, "true"))
 
         return common_answers
-
-
-
