@@ -12,7 +12,7 @@ class Bot(Client, threading.Thread):
         false_answers = self.json_reader.get('false_options')
         self.answer_choices = true_answers + false_answers
 
-    def wait_for_input(self, timeout):
+    def wait_for_input(self, timeout, msg):
         """
         Overrides the wait_for_input method from the parent class.
         The bot will randomly answer with "True" or "False".

@@ -138,7 +138,7 @@ class Client(threading.Thread):
                 continue
 
             self.current_answer = None
-            self.wait_for_input(10)
+            self.wait_for_input(10, msg)
 
             # If user input is not None, send it to the server
             if self.current_answer is not None:
@@ -166,7 +166,7 @@ class Client(threading.Thread):
                 msg = data.decode()
                 print(msg)
 
-    def wait_for_input(self, timeout):
+    def wait_for_input(self, timeout, msg):
         """
         Wait for user input with a timeout.
 
@@ -179,6 +179,8 @@ class Client(threading.Thread):
         This method prompts the user to enter an answer, waits for the specified timeout period for user input,
         and stores the input in the `current_answer` attribute. If no input is received within the timeout,
         it prints a message indicating that no input was received.
+        :param timeout: the timeout for waiting to the client input
+        :param msg: the question from the server
         """
         self.current_answer = None
         try:
