@@ -2,7 +2,6 @@ import select
 import socket
 import sys
 import threading
-import time
 import Colors
 from JsonReader import JSONReader
 
@@ -10,8 +9,34 @@ SERVER_NAME_LENGTH = 32
 SERVER_PORT_LENGTH = 4
 
 
-class Client:
+class Client(threading.Thread):
+    """
+    Client class for the game.
+
+    This class represents a client that connects to a server and plays the game.
+    It inherits from the `threading.Thread` class to allow for concurrent execution.
+
+    Attributes:
+        player_name (str): The name of the player.
+        game_over_message (str): The message indicating the end of the game.
+        server_port (int): The port number of the server.
+        server_socket (socket.socket): The socket used for communication with the server.
+        udp_socket (socket.socket): The UDP socket used for receiving offers.
+        running (bool): A flag indicating whether the client is running or not.
+        json_reader (JsonReader): An instance of the JsonReader class for reading configuration data.
+        server_name (str): The name of the server.
+        server_address (str): The IP address of the server.
+        current_answer (str): The current answer provided by the user or bot.
+    """
+
     def __init__(self, player_name):
+        """
+        Initialize the Client object.
+
+        Args:
+            player_name (str): The name of the player.
+        """
+        super().__init__()
         config_reader = JSONReader("config.json")
         self.game_over_message = config_reader.get("game_over_message")
         self.player_name = player_name
@@ -22,18 +47,41 @@ class Client:
         self.json_reader = JSONReader()
         self.server_name = self.json_reader.get('server_name')
         self.server_address = None
-        self.current_answer = "-1"
+        self.current_answer = None
 
-    def start(self):
-        self.running = True
-        print(f"Starting client for {Colors.ANSI.BLUE.value} {self.player_name} {Colors.ANSI.RESET.value} listening "
-              f"for offers...")
-        self.listen_for_offers()
-        self.connect_to_server()
-        self.get_welcome_message()
-        self.play_game()
+    def run(self):
+        """
+        Run the client.
+
+        This method is the entry point for the client thread.
+        It starts the client, listens for offers, connects to the server, gets the welcome message, and starts the game.
+        """
+        try:
+            self.running = True
+            print(
+                f"Starting client for {Colors.ANSI.BLUE.value} {self.player_name} {Colors.ANSI.RESET.value} listening for offers...")
+            self.listen_for_offers()
+            self.connect_to_server()
+            self.get_welcome_message()
+            self.play_game()
+        except socket.error as e:
+            print(f"Server connection crushed: {e}")
+        finally:
+            if self.server_socket:
+                self.server_socket.close()
+                print("Server socket closed.")
+            if self.udp_socket:
+                self.udp_socket.close()
+                print("UDP socket closed.")
 
     def listen_for_offers(self):
+        """
+        Listen for offers from the server using a UDP socket.
+
+        This method creates a UDP socket, binds it to the destination port specified in the configuration,
+        and listens for offer messages from the server. Once an offer message is received and parsed successfully,
+        it breaks out of the loop and attempts to connect to the server.
+        """
         udp_port = self.json_reader.get('dest_port')
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
@@ -48,6 +96,12 @@ class Client:
                 break
 
     def connect_to_server(self):
+        """
+        Connect to the server using a TCP socket.
+
+        This method creates a TCP socket, connects to the server address and port obtained from the offer message,
+        sends the player's name to the server, and prints a message indicating the successful connection.
+        """
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.connect((self.server_address, self.server_port))
         self.server_socket.sendall(f"{self.player_name}\n".encode())
@@ -55,57 +109,101 @@ class Client:
               f"waiting for game to start... ")
 
     def play_game(self):
-        # Create an event object to signal when the game should stop
+        """
+        Play the game by receiving messages from the server, handling user input, and sending responses.
+
+        This method is the main game loop. It receives messages from the server, prints them, checks for the game over
+        message, prompts the user for input if a question is asked, and sends the user's answer or a default answer
+        to the server. The loop continues until the game is over or the server disconnects.
+        """
         stop_event = threading.Event()
 
-        # Define the game loop function
-        def game_loop():
-            while not stop_event.is_set():
-                data = self.server_socket.recv(4096)
-                if not data:
-                    print("Server disconnected, listening for offer requests...")
-                    stop_event.set()  # Set the event to stop the game loop
-                    break
-                msg = data.decode()
-                print(msg)
-                if self.game_over_message in msg:
-                    print(f"{Colors.ANSI.RED.value} Senior {self.player_name} the game is over, it was a lovely game "
-                          f"{Colors.ANSI.RESET.value}")
-                    stop_event.set()  # Set the event to stop the game loop
-                    break
-                if "True or False" not in msg:
-                    continue
-                # Wait for user input with a 10-second timeout
-                self.current_answer = None
-                self.wait_for_input(10)
+        while not stop_event.is_set():
+            data = self.server_socket.recv(4096)
+            if not data:
+                print("Server disconnected, finishing game...")
+                stop_event.set()  # Set the event to stop the game loop
+                break
 
-                # If user input is not None, send it to the server
-                if self.current_answer is not None:
-                    self.server_socket.sendall(self.current_answer.encode('utf-8'))
-                else:
-                    # Send a default answer if the user hasn't provided one after 10 seconds
-                    self.send_auto_answer()
+            msg = data.decode()
+            print(msg)
 
-        # Create a thread for the game loop
-        game_thread = threading.Thread(target=game_loop)
-        game_thread.start()
+            if self.game_over_message in msg:
+                print(f"{Colors.ANSI.RED.value}Senior {self.player_name} the game is over, it was a lovely game!"
+                      f"{Colors.ANSI.RESET.value}")
+                stop_event.set()  # Set the event to stop the game loop
+                break
 
-        # Wait for the game loop to finish
-        game_thread.join()
+            if "True or False" not in msg:
+                continue
+
+            self.current_answer = None
+            self.wait_for_input(10)
+
+            # If user input is not None, send it to the server
+            if self.current_answer is not None:
+                print(f"Sending answer: {self.current_answer}")
+                self.server_socket.sendall(self.current_answer.encode())
+            # Send a default answer if the user hasn't provided one after 10 seconds
+            else:
+                print("Sending default answer")
+                self.server_socket.sendall("".encode())
 
         # Close the server socket when the game ends
         self.server_socket.close()
 
     def get_welcome_message(self):
-        data = self.server_socket.recv(4096)
-        print(data.decode()) if data else None
+        """
+        Receive and print the welcome message from the server.
 
-    def send_auto_answer(self):
-        # Send a default answer if the user hasn't provided one after 10 seconds
-        default_answer = "Auto answer after 10 seconds"
-        self.server_socket.sendall(default_answer.encode())
+        This method repeatedly receives data from the server until it receives a message containing the string 'Welcome'.
+        It prints any messages received from the server.
+        """
+        msg = None
+        while not msg or 'Welcome' not in msg:
+            data = self.server_socket.recv(4096)
+            if data:
+                msg = data.decode()
+                print(msg)
+
+    def wait_for_input(self, timeout):
+        """
+        Wait for user input with a timeout.
+
+        Args:
+            timeout (int): The timeout period in seconds.
+
+        Returns:
+            str or None: The user input if received within the timeout, else None.
+
+        This method prompts the user to enter an answer, waits for the specified timeout period for user input,
+        and stores the input in the `current_answer` attribute. If no input is received within the timeout,
+        it prints a message indicating that no input was received.
+        """
+        self.current_answer = None
+        try:
+            print(f"{Colors.ANSI.GREEN.value}Enter your answer{Colors.ANSI.RESET.value} (you have 10 seconds !):")
+            inputs, _, _ = select.select([sys.stdin], [], [], timeout)
+            if inputs:
+                ans = sys.stdin.readline().strip()
+                self.current_answer = ans
+        except TimeoutError:
+            print("No input received within 10 seconds.")
 
     def parse_offer_message(self, message):
+        """
+        Parse an offer message from the server.
+
+        Args:
+            message (bytes): The offer message received from the server.
+
+        Returns:
+            bool: True if the offer message is valid and contains the expected data, False otherwise.
+
+        This method parses the offer message received from the server and validates its contents against the expected
+        format and configuration data. If the message is valid, it extracts the server port from the message and
+        returns True. Otherwise, it returns False.
+        """
         if len(message) < 4 + 1 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH:
             return False
 
@@ -126,47 +224,8 @@ class Client:
         self.server_port = int(message[13 + SERVER_NAME_LENGTH: 13 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH].decode())
         return True
 
-    def wait_for_input(self, timeout):
-        """
-        Wait for user input with a timeout.
 
-        Args:
-            timeout (int): The timeout period in seconds.
-
-        Returns:
-            str or None: The user input if received within the timeout, else None.
-        """
-        print("Waiting for input...")
-
-        # Function to read input asynchronously
-        def input_thread_func():
-            try:
-                print(f"{Colors.ANSI.GREEN.value}Enter your answer{Colors.ANSI.RESET.value} (you have 10 seconds !):")
-                inputs, _, _ = select.select([sys.stdin], [], [], timeout)
-                if inputs:
-                    ans = sys.stdin.readline().strip()
-                    print(f"You answered: {ans}")
-                    self.current_answer = ans
-                else:
-                    print("No input received within 10 seconds.")
-                    self.current_answer = "-1"
-            except Exception as e:
-                print(f"Error in input_thread_func: {e}")
-                self.current_answer = None
-
-        input_thread = threading.Thread(target=input_thread_func)
-        input_thread.start()
-        input_thread.join()
-
-        if input_thread.is_alive():
-            print("Thread timed out, continuing ...")
-            self.current_answer = "-1"
-        else:
-            print("Thread finished successfully.")
-
-
-# Example usage
-name = input("Hey my dear friend! Have a nice day! please press enter to enter your answer and then your name :D <3 "
-             "<3    XD")
-client = Client(name)
-client.start()
+if __name__ == '__main__':
+    client_name = sys.argv[1]
+    client = Client(client_name)
+    client.start()

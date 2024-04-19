@@ -29,13 +29,23 @@ class PlayerManager:
             player (Player): The player to add.
         """
         with self.lock:
-            name = player.get_name()
-            if name in self.players:
-                for i in range(len(self.players)):
-                    if not name + "_" + str(i) in self.players:
-                        player.set_name(name + "_" + str(i))
+            name_changed = False
+            player_name = player.get_name()
+            players_names = self.get_players_names()
+            i = 1
+            while player_name in players_names:
+                new_player_name = f'{player_name}({i})'
+                if new_player_name not in players_names:
+                    player.set_name(new_player_name)
+                    name_changed = True
+                    break
+                i += 1
             self.players.append(player)
             self.active_players.append(player)
+            return name_changed
+
+    def get_players_names(self):
+        return [player.get_name() for player in self.players]
 
     def get_players(self):
         """

@@ -143,6 +143,28 @@
         "question": "The actor Heath Ledger won a posthumous Oscar for his role in 'The Dark Knight'.",
         "is_true": true
     }
-]
+  ],
+  "names": [
+    "John",
+    "Jane",
+    "Michael",
+    "Emily",
+    "William",
+    "Sophia",
+    "James",
+    "Olivia",
+    "Alexander",
+    "Charlotte",
+    "Daniel",
+    "Emma",
+    "Matthew",
+    "Ava",
+    "Benjamin",
+    "Isabella",
+    "Ethan",
+    "Mia",
+    "Jacob",
+    "Amelia"
+  ]
 
 }

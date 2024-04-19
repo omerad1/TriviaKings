@@ -19,7 +19,6 @@ class GameEngine:
         socket (socket): The TCP socket used for communication with the clients.
         true_answers (list): List of true answers.
         false_answers (list): List of false answers.
-        is_game_over (threading.Event): Event object to signal when the game is over.
     """
 
     def __init__(self, player_manager, questions, true_answers, false_answers, server_name):
@@ -111,6 +110,7 @@ class GameEngine:
             tcp_socket (socket.socket): The TCP socket for communication with clients.
         """
         self.send_welcome_message()
+        time.sleep(1)
         self.socket = tcp_socket
         random.shuffle(self.questions)
         winner = None
@@ -151,7 +151,9 @@ class GameEngine:
         """
         correct_players = []
         incorrect_players = []
+        print(f'The correct answer was {answer}')
         for player, player_answer in answers.items():
+            print(f'Player: {player.get_name()} answered: {player_answer}')
             if (answer and player_answer in self.true_answers) or (not answer and player_answer in self.false_answers):
                 correct_players.append(player)
             else:
@@ -197,9 +199,9 @@ class GameEngine:
             msg = ""
             for player in self.player_manager.get_active_players():
                 if player in correct_players:
-                    msg += f"{ANSI.GREEN.value} {player.name} is correct ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}"
+                    msg += f"{ANSI.GREEN.value}{player.name} is correct ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}\n"
                 else:
-                    msg += f"{ANSI.RED.value} {player.name} is incorrect ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}"
+                    msg += f"{ANSI.RED.value}{player.name} is incorrect ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}\n"
 
             self.player_manager.set_active_players(correct_players)
             self.send_message_to_clients(msg)

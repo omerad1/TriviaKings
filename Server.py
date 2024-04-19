@@ -164,8 +164,12 @@ class Server:
         try:
             player_name = client_socket.recv(1024).decode().strip()
             player = Player(player_name, client_socket, True)
-            self.player_manager.add_player(player)
-            print(f"Player {player_name} connected from {address}")
+            name_changed = self.player_manager.add_player(player)
+            name = player.get_name()
+            print(f"Player {name} connected from {address}")
+            if name_changed:
+                msg = f'Your name changed to {name}'
+                player.get_socket().sendall(msg.encode())
         except Exception as e:
             print(f"Error handling client: {e}")
 
