@@ -39,9 +39,7 @@ class Statistics:
                 Loads existing data from the JSON file or creates a new file if not found.
                 """
         try:
-            file = open('config.json', 'r')
-            data = json.load(file)
-            file.close()
+            data = JSONReader('config.json')
             self.players_data = data.get('players_data', {})
             self.questions_data = data.get('questions_data', {})
         except FileNotFoundError:

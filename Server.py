@@ -33,16 +33,21 @@ def find_available_port(ip_address, start_port=1024, end_port=49151):
     raise Exception("No available port found in the given range.")
 
 
-def get_ip_address():
+def get_ip_address(interface_name='en0'):
     """
-    Get the IP address of the current machine.
+    Get the IP address of the specified network interface.
+
+    Args:
+        interface_name (str): The name of the network interface. Default is 'en0'.
 
     Returns:
-        str: The IP address of the current machine.
+        str: The IP address of the specified network interface.
     """
-    hostname = socket.gethostname()
-    addr = socket.gethostbyname(hostname)
-    return addr
+    addrs = netifaces.ifaddresses(interface_name)
+    if netifaces.AF_INET in addrs:
+        return addrs[netifaces.AF_INET][0]['addr']
+    else:
+        return None
 
 
 def get_subnet_mask(ip_address):
