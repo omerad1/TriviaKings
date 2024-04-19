@@ -36,8 +36,7 @@ class ClientHandler(threading.Thread):
         name = self.player.get_name()
         client_socket = self.player.get_socket()
         try:
-            answer = client_socket.recv(1024).decode('utf-8')
-            answer = answer.strip('\n')
+            answer = client_socket.recv(1024).decode()
             # Use thread-safe access to the shared dictionary
             with self.client_answers_lock:
                 self.client_answers[self.player] = answer
