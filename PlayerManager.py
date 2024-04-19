@@ -56,16 +56,17 @@ class PlayerManager:
         """
         return self.players
 
-    def update_player_status(self, player):
+    def kick_player(self, player):
         """
-        Updates the status of a player.
+        Kick inactive player.
 
         Args:
-            player (Player): The player to update.
+            player (Player): The player to kick.
         """
         with self.lock:
             if player in self.players:
-                player.set_active(False)
+                self.players.remove(player)
+            if player in self.active_players:
                 self.active_players.remove(player)
 
     def get_active_players(self):
@@ -85,4 +86,8 @@ class PlayerManager:
             active_players (list): List of active players.
         """
         with self.lock:
+            for player in self.players:
+                if player not in active_players:
+                    player.set_active(False)
             self.active_players = active_players
+

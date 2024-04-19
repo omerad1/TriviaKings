@@ -21,7 +21,8 @@ class GameEngine:
         false_answers (list): List of false answers.
     """
 
-    def __init__(self, player_manager, questions, true_answers, false_answers, server_name):
+    def __init__(self, player_manager, questions, true_answers, false_answers, server_name,
+                 question_prefix, client_lose_msg):
         """
         Initializes the GameEngine with the provided parameters.
 
@@ -39,6 +40,8 @@ class GameEngine:
         self.socket = None
         self.true_answers = true_answers
         self.false_answers = false_answers
+        self.question_prefix = question_prefix
+        self.client_lose_message = client_lose_msg
 
     def get_answers(self):
         """
@@ -69,12 +72,12 @@ class GameEngine:
         except socket.error as se:
             print(f"A socket error occurred {se}")
             print(f'player {player.get_name()} has been kicked')
-            self.player_manager.update_player_status(player)
+            self.player_manager.kick_player(player)
 
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             print(f'player {player.get_name()} has been kicked')
-            self.player_manager.update_player_status(player)
+            self.player_manager.kick_player(player)
 
     def send_message_to_clients(self, msg):
         """
@@ -84,7 +87,7 @@ class GameEngine:
             msg (str): The message to send to clients.
         """
         print(msg)
-        for player in self.player_manager.get_active_players():
+        for player in self.player_manager.get_players():
             self.handle_client_send(player, msg)
 
     def send_welcome_message(self):
@@ -169,12 +172,18 @@ class GameEngine:
             (string) the round msg for the players
         """
         player_names = ", ".join([player.get_name() for player in self.player_manager.get_active_players()])
-        round_msg = f"{ANSI.CYAN.value}Round {self.round}{ANSI.RESET.value}"
+        round_msg = f"{ANSI.CYAN.value}Round {(self.round + 1)}{ANSI.RESET.value}"
         player_msg = f"{ANSI.BLUE.value}, played by {player_names}{ANSI.RESET.value}"
         question_msg = f"{ANSI.MAGENTA.value}\nThe next question is...{ANSI.RESET.value}"
-        question_body = f"\nTrue or False: {question['question']}"
+        question_body = f"\n{self.question_prefix}: {question['question']}"
         msg = f"{round_msg}{player_msg}{question_msg}{question_body}"
         return msg
+
+    def send_message_to_losers(self, losers):
+        print('got here !!!')
+        msg = f'{ANSI.RED.value}{self.client_lose_message}{ANSI.SAD_FACE.value}{ANSI.RESET.value}'
+        for player in losers:
+            self.handle_client_send(player, msg)
 
     def play_round(self, question):
         """
@@ -205,4 +214,6 @@ class GameEngine:
 
             self.player_manager.set_active_players(correct_players)
             self.send_message_to_clients(msg)
+            self.send_message_to_losers(incorrect_players)
+
         return None

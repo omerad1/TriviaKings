@@ -18,13 +18,9 @@ class Client(threading.Thread):
 
     Attributes:
         player_name (str): The name of the player.
-        game_over_message (str): The message indicating the end of the game.
         server_port (int): The port number of the server.
         server_socket (socket.socket): The socket used for communication with the server.
         udp_socket (socket.socket): The UDP socket used for receiving offers.
-        running (bool): A flag indicating whether the client is running or not.
-        json_reader (JsonReader): An instance of the JsonReader class for reading configuration data.
-        server_name (str): The name of the server.
         server_address (str): The IP address of the server.
         current_answer (str): The current answer provided by the user or bot.
     """
@@ -37,15 +33,11 @@ class Client(threading.Thread):
             player_name (str): The name of the player.
         """
         super().__init__()
-        config_reader = JSONReader("config.json")
-        self.game_over_message = config_reader.get("game_over_message")
+        self.config_reader = JSONReader("config.json")
         self.player_name = player_name
         self.server_port = None
         self.server_socket = None
         self.udp_socket = None
-        self.running = False
-        self.json_reader = JSONReader()
-        self.server_name = self.json_reader.get('server_name')
         self.server_address = None
         self.current_answer = None
 
@@ -57,15 +49,14 @@ class Client(threading.Thread):
         It starts the client, listens for offers, connects to the server, gets the welcome message, and starts the game.
         """
         try:
-            self.running = True
-            print(
-                f"Starting client for {Colors.ANSI.BLUE.value} {self.player_name} {Colors.ANSI.RESET.value} listening for offers...")
+            print(f"Starting client for {Colors.ANSI.BLUE.value} {self.player_name} {Colors.ANSI.RESET.value}"
+                  f" listening for offers...")
             self.listen_for_offers()
             self.connect_to_server()
             self.get_welcome_message()
             self.play_game()
-        except socket.error as e:
-            print(f"Server connection crushed: {e}")
+        except socket.error:
+            print("Server disconnected, finishing game...")
         finally:
             if self.server_socket:
                 self.server_socket.close()
@@ -82,17 +73,18 @@ class Client(threading.Thread):
         and listens for offer messages from the server. Once an offer message is received and parsed successfully,
         it breaks out of the loop and attempts to connect to the server.
         """
-        udp_port = self.json_reader.get('dest_port')
+
+        udp_port = self.config_reader.get('dest_port')
+        server_name = self.config_reader.get('server_name')
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.udp_socket.bind(('', udp_port))
-        while self.running:
+        while True:
             message, address = self.udp_socket.recvfrom(4096)
             self.server_address = address[0]
             if self.parse_offer_message(message):
-                print(
-                    f"Received offer from server '{Colors.ANSI.MAGENTA.value} {self.server_name} {Colors.ANSI.RESET.value}' at address {self.server_address}, "
-                    f"attempting to connect...")
+                print(f"Received offer from server '{Colors.ANSI.MAGENTA.value}{server_name} {Colors.ANSI.RESET.value}'"
+                      f" at address {self.server_address}, attempting to connect...")
                 break
 
     def connect_to_server(self):
@@ -116,25 +108,29 @@ class Client(threading.Thread):
         message, prompts the user for input if a question is asked, and sends the user's answer or a default answer
         to the server. The loop continues until the game is over or the server disconnects.
         """
-        stop_event = threading.Event()
-
-        while not stop_event.is_set():
+        # Set a timeout for receiving data
+        loser_message = self.config_reader.get('loser_message')
+        question_message = self.config_reader.get('question_message_prefix')
+        can_insert_input = True
+        while True:
             data = self.server_socket.recv(4096)
             if not data:
                 print("Server disconnected, finishing game...")
-                stop_event.set()  # Set the event to stop the game loop
                 break
 
             msg = data.decode()
             print(msg)
 
-            if self.game_over_message in msg:
+            game_over_msg = self.config_reader.get("game_over_message")
+            if game_over_msg in msg:
                 print(f"{Colors.ANSI.RED.value}Senior {self.player_name} the game is over, it was a lovely game!"
                       f"{Colors.ANSI.RESET.value}")
-                stop_event.set()  # Set the event to stop the game loop
                 break
 
-            if "True or False" not in msg:
+            if loser_message in msg:
+                can_insert_input = False
+
+            if not (can_insert_input and question_message in msg):
                 continue
 
             self.current_answer = None
@@ -206,21 +202,22 @@ class Client(threading.Thread):
         format and configuration data. If the message is valid, it extracts the server port from the message and
         returns True. Otherwise, it returns False.
         """
+        real_magic_cookie = self.config_reader.get('magic_cookie')
+        real_message_type = self.config_reader.get('message_type')
+        real_server_name = self.config_reader.get('server_name')
         if len(message) < 4 + 1 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH:
             return False
 
-        real_magic_cookie = self.json_reader.get('magic_cookie')
         magic_cookie = message[:10].decode('utf-8')
         if magic_cookie != real_magic_cookie:
             return False
 
-        offer_message_type = self.json_reader.get('message_type')
         message_type = message[10:13].decode('utf-8')
-        if message_type != offer_message_type:
+        if message_type != real_message_type:
             return False
 
         server_name = message[13:13 + SERVER_NAME_LENGTH].decode().strip()
-        if self.server_name != server_name:
+        if real_server_name != server_name:
             return False
 
         self.server_port = int(message[13 + SERVER_NAME_LENGTH: 13 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH].decode())

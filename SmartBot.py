@@ -9,10 +9,10 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 class SmartBot(Client, threading.Thread):
     def __init__(self, player_name, answer_probability):
-        super().__init__(player_name)
+        super().__init__(f'BOT:{player_name}')
         self.answer_probability = answer_probability
-        true_answers = self.json_reader.get('true_options')
-        false_answers = self.json_reader.get('false_options')
+        true_answers = self.config_reader.get('true_options')
+        false_answers = self.config_reader.get('false_options')
         self.answer_choices = true_answers + false_answers
         model_path = os.path.join("saved_models", "model")
         tokenizer_path = os.path.join("saved_models", "tokenizer")
@@ -42,7 +42,6 @@ class SmartBot(Client, threading.Thread):
 
             # Decode the answer
             answer = "T" if predicted_class_id == 0 else "F"
-
             self.current_answer = answer
         else:
             # Random answer

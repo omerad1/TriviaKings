@@ -1,10 +1,10 @@
 {
   "dest_port": 13117,
   "server_name": "Rav-Hen Masters",
-    "magic_cookie" : "0xabcddcba",
-    "message_type" : "0x2",
-    "true_options" : ["Y","1","T","y","t"],
-    "false_options": ["N","n","0","F","f"],
+  "magic_cookie" : "0xabcddcba",
+  "message_type" : "0x2",
+  "true_options" : ["Y","1","T","y","t"],
+  "false_options": ["N","n","0","F","f"],
   "game_over_message" : "Game over",
   "questions": [
     {
@@ -165,6 +165,8 @@
     "Mia",
     "Jacob",
     "Amelia"
-  ]
+  ],
+  "question_message_prefix": "True or False",
+  "loser_message": "You lost the game, you can only view it now"
 
 }
