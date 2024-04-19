@@ -2,6 +2,7 @@ import threading
 import time
 import netifaces
 import Colors
+from GameStatistics import GameStatistics
 from JsonReader import JSONReader
 from Player import Player
 from PlayerManager import PlayerManager
@@ -120,6 +121,7 @@ class Server:
         self.false_options = self.config_reader.get('false_options')
         self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options, self.false_options,
                                       self.server_name)
+        self.game_statistics = GameStatistics()
 
     def broadcast_offer(self, udp_socket):
         """
@@ -234,6 +236,7 @@ class Server:
                 client_handler = threading.Thread(target=self.handle_client, args=(client_socket, address))
                 client_handler.start()
 
+            self.game_statistics.update_game()
             self.game_engine.play_game(tcp_socket)
 
         self.reset_game()

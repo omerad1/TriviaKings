@@ -73,43 +73,16 @@ class Statistics:
 
         self.save_data()
 
-    def update_correct_players(self, correct_players):
-        """
-               Updates statistics for correct answers by players.
-
-               Args:
-                   correct_players (list): A list of players who answered correctly.
-               """
-        for player in correct_players:
-            self.players_data[player]['correct'] += 1
-
+    def update_player(self, player, key):
+        name = player.get_name()
+        if name in self.players_data.keys():
+            self.players_data[name][key] += 1
         self.save_data()
 
-    def update_incorrect_players(self, incorrect_players):
-        """
-                Updates statistics for incorrect answers by players.
-
-                Args:
-                    incorrect_players (list): A list of players who answered incorrectly.
-                """
-        for player in incorrect_players:
-            if player not in self.players_data:
-                self.players_data[player] = {'correct': 0, 'incorrect': 0, 'win': 0}
-            self.players_data[player]['incorrect'] += 1
-
-        self.save_data()
-
-    def update_winner_player(self, player):
-        """
-                Updates statistics for winning players.
-
-                Args:
-                    player (str): The winning player's name.
-                """
-        if player not in self.players_data:
-            self.players_data[player] = {'correct': 0, 'incorrect': 0, 'win': 0}
-        self.players_data[player]['win'] += 1
-
+    def add_new_player(self, player):
+        name = player.get_name()
+        if name not in self.players_data.keys():
+            self.questions_data[name] = {'correct': 0, 'incorrect': 0, 'win': 0}
         self.save_data()
 
     def get_most_winner(self):

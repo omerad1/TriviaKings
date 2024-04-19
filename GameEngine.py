@@ -6,6 +6,7 @@ from Colors import ANSI
 from ClientHandler import ClientHandler
 from PlayerManager import PlayerManager
 from Player import Player
+from GameStatistics import GameStatistics
 
 
 class GameEngine:
@@ -39,6 +40,9 @@ class GameEngine:
         self.socket = None
         self.true_answers = true_answers
         self.false_answers = false_answers
+        self.game_statistics = GameStatistics()
+        for player in self.player_manager.get_players():
+            self.game_statistics.add_player(player)
 
     def get_answers(self):
         """
@@ -176,6 +180,12 @@ class GameEngine:
         msg = f"{round_msg}{player_msg}{question_msg}{question_body}"
         return msg
 
+    def update_players_statistics(self, correct, incorrect,question):
+        for player in correct:
+            self.game_statistics.update_player(player, "correct_answers")
+        for player in incorrect: self.game_statistics.update_player(player, "incorrect_answers")
+        self.game_statistics.update_question(question["question"],len(correct),len(incorrect))
+
     def play_round(self, question):
         """
         Plays a round of the game.
@@ -186,6 +196,9 @@ class GameEngine:
         self.send_message_to_clients(round_msg)
         answers = self.get_answers()
         correct_players, incorrect_players = self.handle_answers(answers, question['is_true'])
+
+        self.update_players_statistics(correct_players, incorrect_players,question)  # update the game statistics
+
         # no one answered / no one answered correct
         if len(correct_players) == 0:
             self.send_message_to_clients(f"{ANSI.RED.value}No one answered correctly {ANSI.SAD_FACE.value} "
