@@ -201,7 +201,7 @@ class GameEngine:
                 if player in correct_players:
                     msg += f"{ANSI.GREEN.value}{player.name} is correct ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}\n"
                 else:
-                    msg += f"{ANSI.RED.value}{player.name} is incorrect ! {ANSI.THUMBS_UP.value} {ANSI.RESET.value}\n"
+                    msg += f"{ANSI.RED.value}{player.name} is incorrect ! {ANSI.THUMBS_DOWN.value} {ANSI.RESET.value}\n"
 
             self.player_manager.set_active_players(correct_players)
             self.send_message_to_clients(msg)
