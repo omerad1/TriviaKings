@@ -1,4 +1,6 @@
+import select
 import socket
+import sys
 import threading
 import time
 import Colors
@@ -34,7 +36,7 @@ class Client:
     def listen_for_offers(self):
         udp_port = self.json_reader.get('dest_port')
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.udp_socket.bind(('', udp_port))
         while self.running:
             message, address = self.udp_socket.recvfrom(4096)
@@ -71,7 +73,8 @@ class Client:
                           f"{Colors.ANSI.RESET.value}")
                     stop_event.set()  # Set the event to stop the game loop
                     break
-
+                if "True or False" not in msg:
+                    continue
                 # Wait for user input with a 10-second timeout
                 self.current_answer = None
                 self.wait_for_input(10)
@@ -134,29 +137,36 @@ class Client:
             str or None: The user input if received within the timeout, else None.
         """
         print("Waiting for input...")
-        start_time = time.time()
 
         # Function to read input asynchronously
         def input_thread_func():
             try:
-                ans = input("Enter your answer (you have 10 seconds !): ")
-                print(ans)
-                self.current_answer = ans
+                print(f"{Colors.ANSI.GREEN.value}Enter your answer{Colors.ANSI.RESET.value} (you have 10 seconds !):")
+                inputs, _, _ = select.select([sys.stdin], [], [], timeout)
+                if inputs:
+                    ans = sys.stdin.readline().strip()
+                    print(f"You answered: {ans}")
+                    self.current_answer = ans
+                else:
+                    print("No input received within 10 seconds.")
+                    self.current_answer = "-1"
             except Exception as e:
                 print(f"Error in input_thread_func: {e}")
-                return None
+                self.current_answer = None
 
         input_thread = threading.Thread(target=input_thread_func)
         input_thread.start()
-        input_thread.join(timeout - (time.time() - start_time))  # Wait for the remaining time
+        input_thread.join()
 
         if input_thread.is_alive():
-            print("No input received, continuing ...")
+            print("Thread timed out, continuing ...")
             self.current_answer = "-1"
         else:
-            print("Answer received: " + self.current_answer)
+            print("Thread finished successfully.")
 
 
 # Example usage
-client = Client("Crime Adam")
+name = input("Hey my dear friend! Have a nice day! please press enter to enter your answer and then your name :D <3 "
+             "<3    XD")
+client = Client(name)
 client.start()
