@@ -1,6 +1,5 @@
 import threading
 from Player import Player
-import Statistics
 
 
 class PlayerManager:
