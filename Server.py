@@ -13,13 +13,15 @@ import ipaddress
 
 
 def print_dictionary(dictionary):
-    print(f"{ANSI.CROWN.value} {ANSI.PINK.value}Dictionary{ANSI.RESET.value} {ANSI.CROWN.value}")
     for key, value in dictionary.items():
-        key_color = ANSI.GREEN.value if isinstance(value, dict) else ANSI.BLUE.value
-        value_color = ANSI.YELLOW.value if isinstance(value, dict) else ANSI.MAGENTA.value
-        print(f"{key_color}{key}:{ANSI.RESET.value} {value_color}{value}{ANSI.RESET.value}")
+        key_color = ANSI.GREEN.value
+        value_color = ANSI.MAGENTA.value
+        print(f"{key_color}{key}:")
         if isinstance(value, dict):
-            print_dictionary(value)
+            for k, v in value.items():
+                key_color = ANSI.BLUE.value
+                print(f"{key_color}{k}: {value_color}{v}")
+        print("")
 
 
 def find_available_port(ip_address, start_port=1024, end_port=49151):
@@ -152,14 +154,14 @@ class Server:
         brod_ip = get_broadcast_ip(self.ip_address, subnet_mask)
         print(f"{ANSI.MAGENTA.value}Server started, listening on IP address \n"
               f"{ANSI.RESET.value}{self.ip_address} waiting for players to join the game!")
-        offer_message = (
-                self.magic_cookie.encode('utf-8') + self.message_type.encode('utf-8') +
-                self.server_name.encode('utf-8').ljust(32) + str(self.tcp_port).encode('utf-8'))
+        encoded_server_name = self.server_name.encode('utf-8').ljust(32, b'\x00')
+        # Pack the packet data into bytes
+        packet = struct.pack('!IB32sH', int(self.magic_cookie, 16), int(self.message_type, 16), encoded_server_name, self.tcp_port)
         start_time = time.time()
         curr_len = len(self.player_manager.get_players())
         while curr_len == 0 or time.time() - start_time <= 10:
             try:
-                udp_socket.sendto(offer_message, (brod_ip, self.dest_port))
+                udp_socket.sendto(packet, (brod_ip, self.dest_port))
             except OSError as e:
                 print("Error:", e)
                 continue
@@ -259,6 +261,8 @@ class Server:
                 return
 
     def print_statistics(self):
+        self.game_statistics.reload_statistics()  # Reload statistics from the JSON file
+
         while True:
             print(
                 f"{ANSI.CYAN.value}Stats Menu:\n1. Players Statistics\n2. Questions Statistics\n3. The king of trivia "

@@ -214,14 +214,12 @@ class Client(threading.Thread):
             server_name = encoded_server_name.decode('utf-8').rstrip('\x00')
             magic_cookie = hex(magic_cookie)
             message_type = hex(message_type)
-            print(magic_cookie, message_type, server_name, self.server_port)
 
         except struct.error:
             return None
         except TypeError:
             return None
         # Validate the magic cookie and message type
-        print(magic_cookie, message_type, server_name, self.server_port)
         if str(magic_cookie) != real_magic_cookie or str(message_type) != real_message_type or server_name != real_server_name:
             return None
 

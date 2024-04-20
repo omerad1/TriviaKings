@@ -42,8 +42,7 @@ class GameEngine:
         self.true_answers = true_answers
         self.false_answers = false_answers
         self.game_statistics = GameStatistics()
-        for player in self.player_manager.get_players():
-            self.game_statistics.add_player(player)
+
         self.question_prefix = question_prefix
         self.client_lose_message = client_lose_msg
 
@@ -118,6 +117,9 @@ class GameEngine:
         Args:
             tcp_socket (socket.socket): The TCP socket for communication with clients.
         """
+        for player in self.player_manager.get_active_players():
+            print(f"player {player}")
+            self.game_statistics.add_player(player)
         self.send_welcome_message()
         time.sleep(1)
         self.socket = tcp_socket
@@ -146,6 +148,7 @@ class GameEngine:
         Args:
             winner (Player): The winning player.
         """
+        self.game_statistics.update_player(winner,"games_won")
         msg = (f"Game over! \nCongratulations to the winner : {ANSI.PINK.value}{winner.get_name()}"
                f" {ANSI.CROWN.value}{ANSI.RESET.value}!")
         self.send_message_to_clients(msg)

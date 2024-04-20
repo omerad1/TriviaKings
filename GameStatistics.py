@@ -37,20 +37,30 @@ class GameStatistics:
     def add_player(self, player):
         name = player.get_name()
         if name not in self.players_data.keys():
-            self.players_data[name] = {"games_played": 0, "games_won": 0, "correct_answers": 0, "incorrect_answers": 0}
+            print(name, "is not a player")
+            self.players_data[name] = {"games_played": 1, "games_won": 0, "correct_answers": 0, "incorrect_answers": 0}
+        else:
+            self.players_data[name]["games_played"] += 1
         self.save_statistics()
 
     def update_player(self, player, key):
         name = player.get_name()
         if name in self.players_data.keys():
             self.players_data[name][key] += 1
-        if key == "games_won" and self.trivia_king[1] < self.players_data[name][key]:
+        if key == "games_won" and self.trivia_king[1] <= self.players_data[name][key]:
             self.trivia_king = (name, self.players_data[name][key])
         self.save_statistics()
 
     def update_game(self):
         self.games_data += 1
         self.save_statistics()
+
+    def reload_statistics(self):
+        reader = JSONReader("statistics.json")
+        self.players_data = reader.get("players_data")
+        self.games_data = reader.get("games_data")
+        self.question_data = reader.get("question_data")
+        self.trivia_king = reader.get("trivia_king")
 
     def update_question(self, question, correct, incorrect):
         if question in self.question_data:
@@ -73,10 +83,12 @@ class GameStatistics:
         return self.trivia_king[0]
 
     def get_max(self, key):
-        max_val = 0
+        max_val = [None, 0]
         for quest, stats in self.question_data.items():
-            if stats[key] > max_val:
-                max_val = quest
+            val = stats[key]
+            if val > max_val[1]:
+                max_val[0] = quest
+                max_val[1] = val
         return max_val
 
     def get_most_incorrect_question(self):
