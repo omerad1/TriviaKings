@@ -13,6 +13,10 @@ class GameStatistics:
     """
 
     def __init__(self):
+        """
+        Loads statistics from a JSON file.
+        If the file is missing or incomplete, initializes with default values.
+        """
         self.players_data = {}
         self.games_data = 0
         self.question_data = {}
@@ -35,6 +39,12 @@ class GameStatistics:
             self.save_statistics()
 
     def add_player(self, player):
+        """
+        Adds a player to the statistics or updates existing player's data.
+
+        Args:
+            player: An instance of the Player class representing the player to be added.
+        """
         name = player.get_name()
         if name not in self.players_data.keys():
             print(name, "is not a player")
@@ -44,6 +54,13 @@ class GameStatistics:
         self.save_statistics()
 
     def update_player(self, player, key):
+        """
+        Updates the statistics for a player.
+
+        Args:
+            player: An instance of the Player class representing the player to be updated.
+            key: The key specifying the statistic to be updated (e.g., "games_won", "correct_answers").
+        """
         name = player.get_name()
         if name in self.players_data.keys():
             self.players_data[name][key] += 1
@@ -52,10 +69,17 @@ class GameStatistics:
         self.save_statistics()
 
     def update_game(self):
+        """
+        Updates the total number of games played.
+        """
+
         self.games_data += 1
         self.save_statistics()
 
     def reload_statistics(self):
+        """
+        Reloads statistics from the JSON file.
+        """
         reader = JSONReader("statistics.json")
         self.players_data = reader.get("players_data")
         self.games_data = reader.get("games_data")
@@ -63,6 +87,14 @@ class GameStatistics:
         self.trivia_king = reader.get("trivia_king")
 
     def update_question(self, question, correct, incorrect):
+        """
+        Updates statistics for a specific trivia question.
+
+        Args:
+            question: The trivia question to be updated.
+            correct: Number of correct answers.
+            incorrect: Number of incorrect answers.
+        """
         if question in self.question_data:
             self.question_data[question]["correct_answers"] += correct
             self.question_data[question]["incorrect_answers"] += incorrect
@@ -70,6 +102,9 @@ class GameStatistics:
         self.save_statistics()
 
     def save_statistics(self):
+        """
+        Saves current statistics to a JSON file.
+        """
         statistics = {
             "players_data": self.players_data,
             "games_data": self.games_data,
@@ -80,9 +115,24 @@ class GameStatistics:
             json.dump(statistics, file)
 
     def get_trivia_king(self):
+        """
+        Retrieves the name of the trivia king (player with the most games won).
+
+        Returns:
+            str: The name of the trivia king.
+        """
         return self.trivia_king[0]
 
     def get_max(self, key):
+        """
+        Finds the question with the maximum value for a given statistic.
+
+        Args:
+            key: The key specifying the statistic to be considered (e.g., "correct_answers", "incorrect_answers").
+
+        Returns:
+            Tuple[str, int]: A tuple containing the question and the maximum value.
+        """
         max_val = [None, 0]
         for quest, stats in self.question_data.items():
             val = stats[key]
@@ -110,10 +160,29 @@ class GameStatistics:
         return self.get_max("correct_answers")
 
     def get_players_data(self):
+        """
+        Retrieves the dictionary containing players' statistics.
+
+        Returns:
+            dict: A dictionary containing players' statistics.
+        """
+
         return self.players_data
 
     def get_games_data(self):
+        """
+        Retrieves the total number of games played.
+
+        Returns:
+            int: The total number of games played.
+        """
         return self.games_data
 
     def get_question_data(self):
+        """
+        Retrieves the dictionary containing question statistics.
+
+        Returns:
+            dict: A dictionary containing question statistics.
+        """
         return self.question_data

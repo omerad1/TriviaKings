@@ -78,7 +78,7 @@ class GameEngine:
             client_socket.sendall(msg.encode())
         except socket.error as se:
             print(f'Socket error happened when sending player {player.get_name()} a message, error: {se}')
-            self.player_manager.kick_player(player)
+            self.kick_player(player)
 
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
