@@ -184,6 +184,8 @@
    "pedro pedro pedro pedro pedro pedro",
    "pedro ped",
    "pedro pedro pedro pe"
-]
+],
+  "question_message_prefix": "True or False",
+  "loser_message": "You lost the game, you can only view it now"
 
 }

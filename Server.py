@@ -12,6 +12,16 @@ import socket
 import ipaddress
 
 
+def print_dictionary(dictionary):
+    print(f"{ANSI.CROWN.value} {ANSI.PINK.value}Dictionary{ANSI.RESET.value} {ANSI.CROWN.value}")
+    for key, value in dictionary.items():
+        key_color = ANSI.GREEN.value if isinstance(value, dict) else ANSI.BLUE.value
+        value_color = ANSI.YELLOW.value if isinstance(value, dict) else ANSI.MAGENTA.value
+        print(f"{key_color}{key}:{ANSI.RESET.value} {value_color}{value}{ANSI.RESET.value}")
+        if isinstance(value, dict):
+            print_dictionary(value)
+
+
 def find_available_port(ip_address, start_port=1024, end_port=49151):
     """
     Find an available port for an application.
@@ -125,7 +135,7 @@ class Server:
         self.question_message_prefix = self.config_reader.get('question_message_prefix')
         self.loser_message = self.config_reader.get('loser_message')
         self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options, self.false_options,
-                                      self.server_name)
+                                      self.server_name,self.question_message_prefix, self.loser_message)
         self.game_statistics = GameStatistics()
 
     def broadcast_offer(self, udp_socket):
@@ -216,7 +226,6 @@ class Server:
 
         """
         Start the trivia server.
-
         This method runs the main loop of the server, handling UDP broadcasts and TCP connections.
         It continues to run until the game is over.
         """
@@ -251,18 +260,34 @@ class Server:
 
     def print_statistics(self):
         while True:
-            print(f"{ANSI.CYAN.value}Stats Menu:\n1. Players Statistics\n2. Questions Statistics\n3. The king of trivia "
-                  f"{ANSI.CROWN.value}{ANSI.RESET.value}")
+            print(
+                f"{ANSI.CYAN.value}Stats Menu:\n1. Players Statistics\n2. Questions Statistics\n3. The king of trivia "
+                f"{ANSI.CROWN.value}{ANSI.RESET.value}")
             choice = input("Enter your choice (1/2/3): ")
+            games = self.game_statistics.get_games_data()
+            print(f"games played: {games}")
             match choice:
                 case '1':
                     print("Player stats")
+                    stat = self.game_statistics.get_players_data()
+                    print_dictionary(stat)
+
                     break
                 case '2':
                     print("Question stats")
+                    stat = self.game_statistics.get_question_data()
+                    print_dictionary(stat)
+                    correct = self.game_statistics.get_most_correct_question()
+                    incorrect = self.game_statistics.get_most_incorrect_question()
+                    print(f"Correct: {correct}")
+                    print(f"Incorrect: {incorrect}")
                     break
                 case '3':
                     print("The King of trivia stats")
+                    stat = self.game_statistics.get_trivia_king()
+                    print(stat)
+
+
                     break
                 case _:
                     print(f"{ANSI.RED.value}Invalid choice. Please enter a valid option.{ANSI.RESET.value}")
