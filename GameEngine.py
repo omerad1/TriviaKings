@@ -118,7 +118,6 @@ class GameEngine:
             tcp_socket (socket.socket): The TCP socket for communication with clients.
         """
         for player in self.player_manager.get_active_players():
-            print(f"player {player}")
             self.game_statistics.add_player(player)
         self.send_welcome_message()
         time.sleep(1)
@@ -131,6 +130,7 @@ class GameEngine:
             if winner is not None:
                 break
             self.round += 1
+            time.sleep(1.5)
 
         if self.round == len(self.questions):
             msg = f"Were out of questions, the game is over {ANSI.SAD_FACE.value}"

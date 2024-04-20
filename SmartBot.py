@@ -7,7 +7,7 @@ from Client import Client
 
 class SmartBot(Client, threading.Thread):
     def __init__(self, player_name, answer_probability):
-        super().__init__(f'BOT:{player_name}')
+        super().__init__(f'SMART_BOT:{player_name} 👽')
         self.answer_probability = answer_probability
 
     def wait_for_input(self, timeout, msg):
