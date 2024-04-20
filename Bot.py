@@ -7,12 +7,12 @@ from Client import Client
 
 class Bot(Client, threading.Thread):
     def __init__(self, player_name):
-        super().__init__(player_name)
-        true_answers = self.json_reader.get('true_options')
-        false_answers = self.json_reader.get('false_options')
+        super().__init__(f'BOT:{player_name}')
+        true_answers = self.config_reader.get('true_options')
+        false_answers = self.config_reader.get('false_options')
         self.answer_choices = true_answers + false_answers
 
-    def wait_for_input(self, timeout):
+    def wait_for_input(self, timeout, msg):
         """
         Overrides the wait_for_input method from the parent class.
         The bot will randomly answer with "True" or "False".
