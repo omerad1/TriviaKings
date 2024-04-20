@@ -1,27 +1,15 @@
-import os
 import random
 import sys
 import threading
-import time
 
 from JsonReader import JSONReader
 from Client import Client
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 class SmartBot(Client, threading.Thread):
     def __init__(self, player_name, answer_probability):
         super().__init__(f'BOT:{player_name}')
         self.answer_probability = answer_probability
-        true_answers = self.config_reader.get('true_options')
-        false_answers = self.config_reader.get('false_options')
-        self.answer_choices = true_answers + false_answers
-        model_path = os.path.join("saved_models", "model")
-        tokenizer_path = os.path.join("saved_models", "tokenizer")
-
-        # Load pre-trained language model and tokenizer
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
     def wait_for_input(self, timeout, msg):
         """

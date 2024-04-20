@@ -1,3 +1,4 @@
+import struct
 import threading
 import time
 import netifaces
@@ -139,14 +140,15 @@ class Server:
         brod_ip = get_broadcast_ip(self.ip_address, subnet_mask)
         print(f"{ANSI.MAGENTA.value}Server started, listening on IP address \n"
               f"{ANSI.RESET.value}{self.ip_address} waiting for players to join the game!")
-        offer_message = (
-                self.magic_cookie.encode('utf-8') + self.message_type.encode('utf-8') +
-                self.server_name.encode('utf-8').ljust(32) + str(self.tcp_port).encode('utf-8'))
+        encoded_server_name = self.server_name.encode('utf-8').ljust(32, b'\x00')
+
+        # Pack the packet data into bytes
+        packet = struct.pack('!IB32sH', int(self.magic_cookie, 16), int(self.message_type, 16), encoded_server_name, self.tcp_port)
         start_time = time.time()
         curr_len = len(self.player_manager.get_players())
         while curr_len == 0 or time.time() - start_time <= 10:
             try:
-                udp_socket.sendto(offer_message, (brod_ip, self.dest_port))
+                udp_socket.sendto(packet, (brod_ip, self.dest_port))
             except OSError as e:
                 print("Error:", e)
                 continue

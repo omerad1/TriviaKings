@@ -1,5 +1,6 @@
 import select
 import socket
+import struct
 import sys
 import threading
 import Colors
@@ -206,22 +207,22 @@ class Client(threading.Thread):
         real_magic_cookie = self.config_reader.get('magic_cookie')
         real_message_type = self.config_reader.get('message_type')
         real_server_name = self.config_reader.get('server_name')
-        if len(message) < 4 + 1 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH:
-            return False
 
-        magic_cookie = message[:10].decode('utf-8')
-        if magic_cookie != real_magic_cookie:
-            return False
+        # Unpack the message data
+        try:
+            magic_cookie, message_type, encoded_server_name, self.server_port = struct.unpack('!IB32sH', message)
+            server_name = encoded_server_name.decode('utf-8').rstrip('\x00')
+            magic_cookie = hex(magic_cookie)
+            message_type = hex(message_type)
+        except struct.error:
+            return None
+        except TypeError:
+            return None
+        # Validate the magic cookie and message type
+        if str(magic_cookie) != real_magic_cookie or str(message_type) != real_message_type or server_name != real_server_name:
+            return None
 
-        message_type = message[10:13].decode('utf-8')
-        if message_type != real_message_type:
-            return False
-
-        server_name = message[13:13 + SERVER_NAME_LENGTH].decode().strip()
-        if real_server_name != server_name:
-            return False
-
-        self.server_port = int(message[13 + SERVER_NAME_LENGTH: 13 + SERVER_NAME_LENGTH + SERVER_PORT_LENGTH].decode())
+        # Decode the server name and strip any null characters
         return True
 
 
