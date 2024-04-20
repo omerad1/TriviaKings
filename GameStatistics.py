@@ -1,5 +1,4 @@
 import json
-
 from JsonReader import JSONReader
 
 
@@ -69,3 +68,40 @@ class GameStatistics:
         }
         with open("statistics.json", "w") as file:
             json.dump(statistics, file)
+
+    def get_trivia_king(self):
+        return self.trivia_king[0]
+
+    def get_max(self, key):
+        max_val = 0
+        for quest, stats in self.question_data.items():
+            if stats[key] > max_val:
+                max_val = quest
+        return max_val
+
+    def get_most_incorrect_question(self):
+        """
+                Returns the question with the most incorrect answers.
+
+                Returns:
+                    str: The question with the most incorrect answers.
+                """
+        return self.get_max("incorrect_answers")
+
+    def get_most_correct_question(self):
+        """
+                Returns the question with the most incorrect answers.
+
+                Returns:
+                    str: The question with the most incorrect answers.
+                """
+        return self.get_max("correct_answers")
+
+    def get_players_data(self):
+        return self.players_data
+
+    def get_games_data(self):
+        return self.games_data
+
+    def get_question_data(self):
+        return self.question_data
