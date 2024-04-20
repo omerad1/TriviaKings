@@ -229,5 +229,7 @@ class Client(threading.Thread):
 
 if __name__ == '__main__':
     client_name = sys.argv[1]
-    client = Client(client_name + "👨🏻")
-    client.start()
+    while True:
+        client = Client(client_name + "👨🏻")
+        client.start()
+        client.join()
