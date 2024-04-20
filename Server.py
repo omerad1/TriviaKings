@@ -22,6 +22,8 @@ def find_available_port(ip_address, start_port=1024, end_port=49151):
     Returns:
         int: The available port number.
     """
+    if ip_address is None:
+        return None
     for port in range(start_port, end_port):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -30,7 +32,7 @@ def find_available_port(ip_address, start_port=1024, end_port=49151):
             return port
         except OSError:
             continue
-    raise Exception("No available port found in the given range.")
+    return None
 
 
 def get_ip_address(interface_name='en0'):
@@ -199,6 +201,7 @@ class Server:
         This method is called once the game is over, it resets the server data and starts over.
         """
         self.player_manager = PlayerManager()
+        self.ip_address = get_ip_address()
         self.udp_port = find_available_port(self.ip_address)
         self.tcp_port = find_available_port(self.ip_address)
         self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options, self.false_options,
@@ -207,12 +210,18 @@ class Server:
         self.start()
 
     def start(self):
+
         """
         Start the trivia server.
 
         This method runs the main loop of the server, handling UDP broadcasts and TCP connections.
         It continues to run until the game is over.
         """
+        if not (self.udp_port and self.tcp_port):
+            print(f"{ANSI.RED.value}Couldn't start game because of connection issues"
+                  f"{ANSI.SAD_FACE.value}{ANSI.RESET.value}")
+            return
+
         while True:
             print(
                 f"{ANSI.GREEN.value}Main Menu:\n1. Start the game\n2. Print statistics\n3. Quit game {ANSI.SAD_FACE.value}{ANSI.RESET.value}")

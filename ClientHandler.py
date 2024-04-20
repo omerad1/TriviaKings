@@ -1,5 +1,6 @@
 import threading
 from Player import Player
+from Colors import ANSI
 
 
 class ClientHandler(threading.Thread):
@@ -41,7 +42,7 @@ class ClientHandler(threading.Thread):
             with self.client_answers_lock:
                 self.client_answers[self.player] = answer
         except Exception as e:
-            print(f"Error receiving answer from {name}: {e}")
+            print(f"{ANSI.RED.value}Socket error when receiving receiving answer from {name}: {e}{ANSI.RESET.value}")
             # Use thread-safe access to the shared dictionary
             with self.client_answers_lock:
                 self.client_answers[self.player] = None

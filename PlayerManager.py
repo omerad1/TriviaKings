@@ -86,8 +86,5 @@ class PlayerManager:
             active_players (list): List of active players.
         """
         with self.lock:
-            for player in self.players:
-                if player not in active_players:
-                    player.set_active(False)
             self.active_players = active_players
 

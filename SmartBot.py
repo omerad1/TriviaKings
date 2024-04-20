@@ -2,6 +2,8 @@ import os
 import random
 import sys
 import threading
+import time
+
 from JsonReader import JSONReader
 from Client import Client
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -26,26 +28,21 @@ class SmartBot(Client, threading.Thread):
         Overrides the wait_for_input method from the parent class.
         The bot will generate a True/False answer using the pre-trained language model.
         """
+        true_ans = (random.random() < self.answer_probability)
+        # Answer based on the model
+        server_rows = msg.split('\n')
+        question = f'{server_rows[-1]}'
+        qus_prefix = f"{self.config_reader.get('question_message_prefix')}:"
+        question = question.lstrip(qus_prefix)
+        print(question)
+        questions = self.config_reader.get('questions')
+        for q in questions:
+            if question in q['question']:
+                if true_ans:
+                    self.current_answer = 't' if q['is_true'] else 'f'
+                else:
+                    self.current_answer = 'f' if q['is_true'] else 't'
 
-        if random.random() < self.answer_probability:
-            # Answer based on the model
-            server_rows = msg.split('\n')
-            question = server_rows[-1]
-
-            # Encode the question using the tokenizer
-            inputs = self.tokenizer(question, return_tensors="pt")
-
-            # Generate the answer using the language model
-            outputs = self.model(**inputs)
-            logits = outputs.logits
-            predicted_class_id = logits.argmax().item()
-
-            # Decode the answer
-            answer = "T" if predicted_class_id == 0 else "F"
-            self.current_answer = answer
-        else:
-            # Random answer
-            self.current_answer = random.choice(self.answer_choices)
         print(f"Bot {self.player_name} answered: {self.current_answer}")
 
 

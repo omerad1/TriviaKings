@@ -65,19 +65,21 @@ class GameEngine:
 
         return client_answers
 
+    def kick_player(self, player):
+        print(f'player {player.get_name()} has been kicked')
+        self.player_manager.kick_player(player)
+
     def handle_client_send(self, player, msg):
         client_socket = player.get_socket()
         try:
             client_socket.sendall(msg.encode())
         except socket.error as se:
-            print(f"A socket error occurred {se}")
-            print(f'player {player.get_name()} has been kicked')
+            print(f'Socket error happened when sending player {player.get_name()} a message, error: {se}')
             self.player_manager.kick_player(player)
 
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-            print(f'player {player.get_name()} has been kicked')
-            self.player_manager.kick_player(player)
+            self.kick_player(player)
 
     def send_message_to_clients(self, msg):
         """
@@ -124,10 +126,12 @@ class GameEngine:
                 break
             self.round += 1
 
-        if self.round > len(self.questions):
-            self.send_message_to_clients("Were out of questions, the game is over :(")
+        if self.round == len(self.questions):
+            msg = f"Were out of questions, the game is over {ANSI.SAD_FACE.value}"
+            print(msg)
+            self.send_message_to_clients(msg)
         elif len(self.player_manager.get_active_players()) == 0:
-            print("Were out of players, game is over :(")
+            print(f"Were out of players, game is over {ANSI.SAD_FACE.value}")
         elif winner is not None:
             self.game_over(winner)
 
@@ -157,7 +161,9 @@ class GameEngine:
         print(f'The correct answer was {answer}')
         for player, player_answer in answers.items():
             print(f'Player: {player.get_name()} answered: {player_answer}')
-            if (answer and player_answer in self.true_answers) or (not answer and player_answer in self.false_answers):
+            if player_answer is None:
+                self.kick_player(player)
+            elif (answer and player_answer in self.true_answers) or (not answer and player_answer in self.false_answers):
                 correct_players.append(player)
             else:
                 incorrect_players.append(player)
@@ -180,7 +186,6 @@ class GameEngine:
         return msg
 
     def send_message_to_losers(self, losers):
-        print('got here !!!')
         msg = f'{ANSI.RED.value}{self.client_lose_message}{ANSI.SAD_FACE.value}{ANSI.RESET.value}'
         for player in losers:
             self.handle_client_send(player, msg)

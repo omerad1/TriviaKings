@@ -73,12 +73,12 @@ class Client(threading.Thread):
         and listens for offer messages from the server. Once an offer message is received and parsed successfully,
         it breaks out of the loop and attempts to connect to the server.
         """
-
         udp_port = self.config_reader.get('dest_port')
         server_name = self.config_reader.get('server_name')
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self.udp_socket.bind(('', udp_port))
+        self.udp_socket.settimeout(50)
         while True:
             message, address = self.udp_socket.recvfrom(4096)
             self.server_address = address[0]
@@ -112,6 +112,7 @@ class Client(threading.Thread):
         loser_message = self.config_reader.get('loser_message')
         question_message = self.config_reader.get('question_message_prefix')
         can_insert_input = True
+        self.server_socket.settimeout(10)
         while True:
             data = self.server_socket.recv(4096)
             if not data:
