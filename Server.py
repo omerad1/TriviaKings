@@ -1,7 +1,8 @@
+import struct
 import threading
 import time
 import netifaces
-import Colors
+from Colors import ANSI
 from GameStatistics import GameStatistics
 from JsonReader import JSONReader
 from Player import Player
@@ -23,6 +24,8 @@ def find_available_port(ip_address, start_port=1024, end_port=49151):
     Returns:
         int: The available port number.
     """
+    if ip_address is None:
+        return None
     for port in range(start_port, end_port):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -31,7 +34,7 @@ def find_available_port(ip_address, start_port=1024, end_port=49151):
             return port
         except OSError:
             continue
-    raise Exception("No available port found in the given range.")
+    return None
 
 
 def get_ip_address(interface_name='en0'):
@@ -119,6 +122,8 @@ class Server:
         self.questions = self.config_reader.get('questions')
         self.true_options = self.config_reader.get('true_options')
         self.false_options = self.config_reader.get('false_options')
+        self.question_message_prefix = self.config_reader.get('question_message_prefix')
+        self.loser_message = self.config_reader.get('loser_message')
         self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options, self.false_options,
                                       self.server_name)
         self.game_statistics = GameStatistics()
@@ -135,8 +140,8 @@ class Server:
         """
         subnet_mask = get_subnet_mask(self.ip_address)
         brod_ip = get_broadcast_ip(self.ip_address, subnet_mask)
-        print(f"{Colors.ANSI.MAGENTA.value}Server started, listening on IP address \n"
-              f"{Colors.ANSI.RESET.value}{self.ip_address} waiting for players to join the game!")
+        print(f"{ANSI.MAGENTA.value}Server started, listening on IP address \n"
+              f"{ANSI.RESET.value}{self.ip_address} waiting for players to join the game!")
         offer_message = (
                 self.magic_cookie.encode('utf-8') + self.message_type.encode('utf-8') +
                 self.server_name.encode('utf-8').ljust(32) + str(self.tcp_port).encode('utf-8'))
@@ -199,20 +204,71 @@ class Server:
         This method is called once the game is over, it resets the server data and starts over.
         """
         self.player_manager = PlayerManager()
+        self.ip_address = get_ip_address()
         self.udp_port = find_available_port(self.ip_address)
         self.tcp_port = find_available_port(self.ip_address)
-        self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options,
-                                      self.false_options, self.server_name)
+        self.game_engine = GameEngine(self.player_manager, self.questions, self.true_options, self.false_options,
+                                      self.server_name, self.question_message_prefix, self.loser_message)
         self.broadcast_finished_event.clear()
         self.start()
 
     def start(self):
+
         """
         Start the trivia server.
 
         This method runs the main loop of the server, handling UDP broadcasts and TCP connections.
         It continues to run until the game is over.
         """
+        if not (self.udp_port and self.tcp_port):
+            print(f"{ANSI.RED.value}Couldn't start game because of connection issues"
+                  f"{ANSI.SAD_FACE.value}{ANSI.RESET.value}")
+            return
+
+        while True:
+            print(
+                f"{ANSI.GREEN.value}Main Menu:\n1. Start the game\n2. Print statistics\n3. Quit game {ANSI.SAD_FACE.value}{ANSI.RESET.value}")
+            choice = input("Enter your choice (1/2/3): ")
+            match choice:
+                case '1':
+                    self.run_game()
+                    return
+                case '2':
+                    self.print_statistics()
+                    return
+                case '3':
+                    return
+                case _:
+                    print(f"{ANSI.RED.value}Invalid choice. Please enter a valid option.{ANSI.RESET.value}")
+
+    def return_to_main_menu(self):
+        choice = input(f"{ANSI.CYAN.value}Do you want to return to main menu? (y/else for no){ANSI.RESET.value}")
+        match choice:
+            case 'y':
+                self.start()
+            case _:
+                return
+
+    def print_statistics(self):
+        while True:
+            print(f"{ANSI.CYAN.value}Stats Menu:\n1. Players Statistics\n2. Questions Statistics\n3. The king of trivia "
+                  f"{ANSI.CROWN.value}{ANSI.RESET.value}")
+            choice = input("Enter your choice (1/2/3): ")
+            match choice:
+                case '1':
+                    print("Player stats")
+                    break
+                case '2':
+                    print("Question stats")
+                    break
+                case '3':
+                    print("The King of trivia stats")
+                    break
+                case _:
+                    print(f"{ANSI.RED.value}Invalid choice. Please enter a valid option.{ANSI.RESET.value}")
+        self.return_to_main_menu()
+
+    def run_game(self):
         udp_socket = self.get_udp_socket()
 
         # Start UDP broadcast thread
